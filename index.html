@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sarah Family — 가계부 / สมุดบัญชี</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+Thai:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f12;
+    --surface: #1a1a1f;
+    --surface2: #24242b;
+    --border: #2e2e36;
+    --accent: #f59e0b;
+    --income: #22c55e;
+    --expense: #ef4444;
+    --text: #fafafa;
+    --text-dim: #9aa0a6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter','Noto Sans KR','Noto Sans Thai',sans-serif; min-height: 100vh; font-size: 14px; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+
+  /* 이중 언어 라벨 */
+  .bi { display: inline; }
+  .bi .ko { }
+  .bi .th { color: var(--text-dim); font-weight: 400; margin-left: 4px; font-size: 0.85em; }
+  .bi .sep { color: var(--text-dim); margin: 0 4px; opacity: 0.5; }
+
+  /* LAYOUT */
+  .header { background: rgba(15,15,18,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .logo { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+  .logo .badge { background: var(--accent); color: #000; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .user-badge { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+  .user-badge img { width: 20px; height: 20px; border-radius: 50%; }
+
+  main { max-width: 820px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  /* MONTH NAV */
+  .month-nav { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
+  .month-nav button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 8px; font-size: 16px; }
+  .month-nav .label { font-size: 17px; font-weight: 700; letter-spacing: 0.3px; text-align: center; }
+  .month-nav .label .th { display: block; font-size: 11px; color: var(--text-dim); font-weight: 500; margin-top: 2px; }
+
+  /* SUMMARY CARDS */
+  .summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .sum-card .label { font-size: 11px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .sum-card .label .th { display: block; font-size: 10px; opacity: 0.7; margin-top: 1px; }
+  .sum-card .val { font-size: 19px; font-weight: 800; font-family: 'JetBrains Mono',monospace; }
+  .sum-card.income .val { color: var(--income); }
+  .sum-card.expense .val { color: var(--expense); }
+  .sum-card.balance .val { color: var(--accent); }
+  @media (max-width: 500px) {
+    .summary { grid-template-columns: 1fr; }
+    .sum-card .val { font-size: 17px; }
+  }
+
+  /* ACTION BAR */
+  .action-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+  .btn { padding: 9px 14px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; transition: opacity 0.15s; line-height: 1.3; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--expense); border: 1px solid rgba(239,68,68,0.3); }
+  .btn .th { display: block; font-size: 10px; opacity: 0.7; margin-top: 1px; font-weight: 500; }
+
+  /* TRANSACTION LIST */
+  .tx-day { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .tx-day-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 12px; }
+  .tx-day-head .date { font-weight: 700; }
+  .tx-day-head .day-sum { color: var(--text-dim); font-family: 'JetBrains Mono',monospace; }
+  .tx-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-item:hover { background: rgba(245,158,11,0.04); }
+  .tx-cat { background: var(--surface2); padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text-dim); white-space: nowrap; }
+  .tx-cat .th { color: var(--text-dim); opacity: 0.7; margin-left: 3px; }
+  .tx-memo { flex: 1; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-amount { font-family: 'JetBrains Mono',monospace; font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .tx-amount.income { color: var(--income); }
+  .tx-amount.expense { color: var(--expense); }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+  .empty-icon { font-size: 48px; margin-bottom: 10px; }
+  .empty .th { display: block; font-size: 12px; margin-top: 6px; opacity: 0.7; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; padding: 14px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 500px; max-height: 92vh; overflow-y: auto; }
+  .modal-header { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-title .th { display: block; font-size: 11px; color: var(--text-dim); font-weight: 500; margin-top: 2px; }
+  .modal-close { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); width: 28px; height: 28px; border-radius: 6px; font-size: 14px; }
+  .modal-body { padding: 16px 18px; }
+
+  /* FORM */
+  .form-group { margin-bottom: 12px; }
+  .form-label { display: block; font-size: 11px; color: var(--text-dim); font-weight: 600; margin-bottom: 5px; }
+  .form-label .th { opacity: 0.75; margin-left: 3px; }
+  .form-input, .form-select, .form-textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s; font-family: 'Inter','Noto Sans KR','Noto Sans Thai',sans-serif; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 60px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .type-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 3px; margin-bottom: 12px; }
+  .type-toggle button { flex: 1; padding: 8px; border-radius: 5px; background: transparent; border: none; color: var(--text-dim); font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .type-toggle button .th { display: block; font-size: 10px; opacity: 0.75; margin-top: 1px; font-weight: 500; }
+  .type-toggle button.active.expense { background: rgba(239,68,68,0.2); color: var(--expense); }
+  .type-toggle button.active.income { background: rgba(34,197,94,0.2); color: var(--income); }
+
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .form-actions .btn { padding: 8px 14px; }
+
+  /* LOGIN SCREEN */
+  .login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; z-index: 200; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px 32px; text-align: center; max-width: 380px; width: 100%; }
+  .login-card h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.3px; }
+  .login-card .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 24px; line-height: 1.7; }
+  .login-card .sub .th { display: block; opacity: 0.85; }
+  .google-btn { display: flex; align-items: center; gap: 10px; background: #fff; color: #222; border: none; padding: 11px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; width: 100%; justify-content: center; cursor: pointer; line-height: 1.3; }
+  .google-btn .th { font-size: 11px; opacity: 0.65; margin-left: 4px; }
+  .google-btn:hover { opacity: 0.92; }
+  .login-error { margin-top: 14px; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; color: var(--expense); font-size: 12px; line-height: 1.5; display: none; }
+  .login-error.show { display: block; }
+
+  .loading { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; z-index: 150; }
+  .loading-text { color: var(--text-dim); font-size: 13px; line-height: 1.6; text-align: center; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* NOTIFICATION */
+  .notif { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); opacity: 0; transition: all 0.25s; z-index: 300; max-width: 90vw; text-align: center; }
+  .notif.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .notif.error { border-color: rgba(239,68,68,0.4); color: var(--expense); }
+
+  /* FAMILY MGMT */
+  .member-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; margin-bottom: 6px; }
+  .member-row .name { flex: 1; font-size: 13px; font-weight: 600; }
+  .member-row .email { color: var(--text-dim); font-size: 11px; }
+  .member-row .role { font-size: 10px; background: rgba(245,158,11,0.18); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- 로딩 -->
+<div class="loading" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">불러오는 중...<br><span style="opacity:0.7;">กำลังโหลด...</span></div>
+</div>
+
+<!-- 로그인 -->
+<div class="login-screen" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <div style="font-size:36px;margin-bottom:6px;">💰</div>
+    <h1>Sarah Family</h1>
+    <div class="sub">우리가족 가계부<span class="th">สมุดบัญชีครอบครัวเรา</span><br>Google 계정으로 로그인하세요<span class="th" style="margin-top:2px;">เข้าสู่ระบบด้วยบัญชี Google</span></div>
+    <button class="google-btn" id="googleLoginBtn" onclick="authLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571c.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+      <span>Google로 로그인<span class="th">เข้าสู่ระบบ</span></span>
+    </button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- 메인 -->
+<div id="app" style="display:none;">
+  <div class="header">
+    <div class="logo"><span>💰</span> Sarah Family <span class="badge">가계부 / บัญชี</span></div>
+    <div class="header-right" id="headerRight"></div>
+  </div>
+
+  <main>
+    <!-- 월 네비게이션 -->
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)" title="이전 달 / เดือนก่อนหน้า">‹</button>
+      <div class="label" id="monthLabel">—</div>
+      <button onclick="changeMonth(1)" title="다음 달 / เดือนถัดไป">›</button>
+    </div>
+
+    <!-- 합계 카드 -->
+    <div class="summary">
+      <div class="sum-card income">
+        <div class="label">수입<span class="th">รายรับ</span></div>
+        <div class="val" id="sumIncome">₩0</div>
+      </div>
+      <div class="sum-card expense">
+        <div class="label">지출<span class="th">รายจ่าย</span></div>
+        <div class="val" id="sumExpense">₩0</div>
+      </div>
+      <div class="sum-card balance">
+        <div class="label">잔액<span class="th">ยอดคงเหลือ</span></div>
+        <div class="val" id="sumBalance">₩0</div>
+      </div>
+    </div>
+
+    <!-- 액션 -->
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="openTxModal()" style="flex:1;">+ 거래 추가<span class="th">เพิ่มรายการ</span></button>
+      <button class="btn btn-ghost" id="familyBtn" onclick="openFamilyModal()" style="display:none;">👨‍👩‍👧 가족<span class="th">ครอบครัว</span></button>
+    </div>
+
+    <!-- 거래 목록 -->
+    <div id="txList"></div>
+  </main>
+</div>
+
+<!-- 거래 추가/수정 모달 -->
+<div class="modal-overlay" id="txModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="txModalTitle">거래 추가<span class="th">เพิ่มรายการ</span></div>
+      <button class="modal-close" onclick="closeTxModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="type-toggle">
+        <button type="button" data-type="expense" class="active expense" onclick="setTxType('expense')">💸 지출<span class="th">รายจ่าย</span></button>
+        <button type="button" data-type="income" onclick="setTxType('income')">💰 수입<span class="th">รายรับ</span></button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">날짜 *<span class="th">วันที่</span></label>
+          <input class="form-input" type="date" id="txDate" onclick="this.showPicker&&this.showPicker()" style="cursor:pointer;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">금액 *<span class="th">จำนวนเงิน</span></label>
+          <input class="form-input" type="number" id="txAmount" inputmode="numeric" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">카테고리 *<span class="th">หมวดหมู่</span></label>
+        <select class="form-select" id="txCategory"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모<span class="th">บันทึก</span></label>
+        <textarea class="form-textarea" id="txMemo" placeholder="선택 입력 / ใส่หรือไม่ก็ได้"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-danger btn-sm" id="txDeleteBtn" onclick="deleteTx()" style="display:none;margin-right:auto;">삭제 / ลบ</button>
+        <button class="btn btn-ghost" onclick="closeTxModal()">취소 / ยกเลิก</button>
+        <button class="btn btn-primary" id="txSaveBtn" onclick="saveTx()">저장 / บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 가족 관리 모달 -->
+<div class="modal-overlay" id="familyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👨‍👩‍👧 가족 구성원<span class="th">สมาชิกครอบครัว</span></div>
+      <button class="modal-close" onclick="document.getElementById('familyModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <input class="form-input" id="famEmail" placeholder="Gmail 주소 / อีเมล Gmail" style="flex:1;min-width:140px;">
+        <input class="form-input" id="famName" placeholder="이름 / ชื่อ" style="flex:1;min-width:100px;">
+        <button class="btn btn-primary btn-sm" onclick="addFamilyMember()">추가 / เพิ่ม</button>
+      </div>
+      <div id="famList"></div>
+      <div style="margin-top:14px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text-dim);line-height:1.6;">
+        💡 가족이 추가되면 그 Google 계정으로 로그인할 수 있습니다.<br>
+        เมื่อเพิ่มสมาชิกแล้ว ผู้ที่มีบัญชี Google นั้นจะเข้าสู่ระบบได้
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 알림 -->
+<div class="notif" id="notif"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, where, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCSKxqK5NCvn3MAe3AtkWFSup6xg0wlauQ",
+  authDomain: "sarah-family.firebaseapp.com",
+  projectId: "sarah-family",
+  storageBucket: "sarah-family.firebasestorage.app",
+  messagingSenderId: "290428040540",
+  appId: "1:290428040540:web:ef40c4969e5191783bfd99",
+  measurementId: "G-JZ5T3HVLBG"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
+
+// ── 상태 ──
+let currentUser = null;
+let currentMonth = new Date(); currentMonth.setDate(1);
+let txCache = [];
+let editingTxId = null;
+let currentTxType = 'expense';
+let txUnsub = null;
+let familyCache = [];
+
+// ── 카테고리 (한/태 매핑) ──
+// 키는 ko (DB 저장용), 표시는 둘 다
+const CATEGORIES = {
+  expense: [
+    { ko: '식비',     th: 'อาหาร' },
+    { ko: '교통',     th: 'การเดินทาง' },
+    { ko: '생활용품', th: 'ของใช้ในบ้าน' },
+    { ko: '의료',     th: 'การแพทย์' },
+    { ko: '교육',     th: 'การศึกษา' },
+    { ko: '문화',     th: 'บันเทิง' },
+    { ko: '통신',     th: 'โทรศัพท์/อินเทอร์เน็ต' },
+    { ko: '공과금',   th: 'ค่าสาธารณูปโภค' },
+    { ko: '주거',     th: 'ที่อยู่อาศัย' },
+    { ko: '쇼핑',     th: 'ช้อปปิ้ง' },
+    { ko: '기타',     th: 'อื่นๆ' }
+  ],
+  income: [
+    { ko: '급여',    th: 'เงินเดือน' },
+    { ko: '용돈',    th: 'เงินที่ได้รับ' },
+    { ko: '부수입',  th: 'รายได้เสริม' },
+    { ko: '환급',    th: 'เงินคืน' },
+    { ko: '기타',    th: 'อื่นๆ' }
+  ]
+};
+
+function getCategoryLabel(ko) {
+  const all = CATEGORIES.expense.concat(CATEGORIES.income);
+  const f = all.find(c => c.ko === ko);
+  return f ? (f.ko + ' / ' + f.th) : (ko || '-');
+}
+
+// 월 한/태
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DOW_KO = ['일','월','화','수','목','금','토'];
+const DOW_TH = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+
+// ── 헬퍼 ──
+const esc = (s) => !s && s !== 0 ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const fmtMoney = (n) => '₩' + (Number(n)||0).toLocaleString('ko-KR');
+const monthKey = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+const todayStr = () => new Date().toISOString().split('T')[0];
+
+function showNotif(msg, isError) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif show' + (isError ? ' error' : '');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── 인증 ──
+window.authLogin = async function() {
+  document.getElementById('loginError').classList.remove('show');
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    document.getElementById('loginError').textContent = '로그인 실패 / เข้าสู่ระบบไม่สำเร็จ: ' + e.message;
+    document.getElementById('loginError').classList.add('show');
+  }
+};
+window.authLogout = async function() {
+  if (!confirm('로그아웃하시겠습니까?\nออกจากระบบใช่หรือไม่?')) return;
+  if (txUnsub) { txUnsub(); txUnsub = null; }
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    return;
+  }
+  try {
+    const ref = doc(db, 'familyMembers', user.email);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('loginError').innerHTML =
+        '❌ <strong>' + esc(user.email) + '</strong><br>'
+        + '이 계정은 가족이 아닙니다. 관리자에게 추가를 요청하세요.<br>'
+        + '<span style="opacity:0.85;">บัญชีนี้ยังไม่ได้เป็นสมาชิกครอบครัว กรุณาขอให้ผู้ดูแลเพิ่ม</span>';
+      document.getElementById('loginError').classList.add('show');
+      await signOut(auth);
+      return;
+    }
+    const data = snap.data();
+    currentUser = { email: user.email, name: data.name || user.displayName || user.email, role: data.role || 'member', photo: user.photoURL || '' };
+    renderHeader();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    if (currentUser.role === 'admin') document.getElementById('familyBtn').style.display = '';
+    subscribeMonth();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginError').textContent = '오류 / ข้อผิดพลาด: ' + e.message;
+    document.getElementById('loginError').classList.add('show');
+  }
+});
+
+function renderHeader() {
+  const el = document.getElementById('headerRight');
+  el.innerHTML = '<div class="user-badge" onclick="authLogout()" title="클릭하여 로그아웃 / คลิกเพื่อออกจากระบบ">'
+    + (currentUser.photo ? '<img src="'+esc(currentUser.photo)+'" alt="">' : '')
+    + '<span>' + esc(currentUser.name) + '</span>'
+    + (currentUser.role === 'admin' ? '<span style="font-size:10px;color:var(--accent);font-weight:700;">ADMIN</span>' : '')
+    + '</div>';
+}
+
+// ── 월 네비 ──
+window.changeMonth = function(delta) {
+  currentMonth.setMonth(currentMonth.getMonth() + delta);
+  subscribeMonth();
+};
+
+function subscribeMonth() {
+  if (txUnsub) { txUnsub(); txUnsub = null; }
+  const mk = monthKey(currentMonth);
+  const y = currentMonth.getFullYear();
+  const m = currentMonth.getMonth();
+  document.getElementById('monthLabel').innerHTML =
+    y + '년 ' + (m+1) + '월 <span class="th">' + MONTHS_TH[m] + ' ' + y + '</span>';
+  const q = query(collection(db, 'transactions'), where('monthKey', '==', mk));
+  txUnsub = onSnapshot(q, (snap) => {
+    txCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    txCache.sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+    renderSummary();
+    renderTxList();
+  }, (err) => {
+    console.error('snapshot error', err);
+    showNotif('데이터 로딩 실패 / โหลดข้อมูลไม่สำเร็จ: ' + err.message, true);
+  });
+}
+
+function renderSummary() {
+  let income = 0, expense = 0;
+  txCache.forEach(t => {
+    if (t.type === 'income') income += Number(t.amount)||0;
+    else expense += Number(t.amount)||0;
+  });
+  document.getElementById('sumIncome').textContent = fmtMoney(income);
+  document.getElementById('sumExpense').textContent = fmtMoney(expense);
+  document.getElementById('sumBalance').textContent = fmtMoney(income - expense);
+}
+
+function renderTxList() {
+  const listEl = document.getElementById('txList');
+  if (!txCache.length) {
+    listEl.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>'
+      + '<div>이번 달 거래 내역이 없습니다<span class="th">ไม่มีรายการในเดือนนี้</span></div>'
+      + '<div style="margin-top:6px;font-size:12px;opacity:0.7;">위의 "+ 거래 추가" 버튼을 눌러 시작하세요<br>กดปุ่ม "+ เพิ่มรายการ" ด้านบนเพื่อเริ่ม</div></div>';
+    return;
+  }
+  const groups = {};
+  txCache.forEach(t => {
+    const d = t.date || '?';
+    (groups[d] = groups[d] || []).push(t);
+  });
+  const dates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+  let html = '';
+  dates.forEach(date => {
+    const items = groups[date];
+    let dayInc = 0, dayExp = 0;
+    items.forEach(t => { if (t.type === 'income') dayInc += Number(t.amount)||0; else dayExp += Number(t.amount)||0; });
+    const parts = [];
+    if (dayInc) parts.push('<span style="color:var(--income);">+' + fmtMoney(dayInc) + '</span>');
+    if (dayExp) parts.push('<span style="color:var(--expense);">-' + fmtMoney(dayExp) + '</span>');
+    const dt = new Date(date);
+    const dowI = dt.getDay();
+    const dowLabel = DOW_KO[dowI] + ' / ' + DOW_TH[dowI];
+    html += '<div class="tx-day">';
+    html += '<div class="tx-day-head"><div class="date">' + esc(date) + ' <span style="color:var(--text-dim);font-weight:400;">(' + dowLabel + ')</span></div><div class="day-sum">' + parts.join(' &nbsp; ') + '</div></div>';
+    items.forEach(t => {
+      html += '<div class="tx-item" onclick="editTx(\'' + esc(t.id) + '\')">';
+      html += '<span class="tx-cat">' + esc(getCategoryLabel(t.category)) + '</span>';
+      html += '<div class="tx-memo">' + (esc(t.memo) || '') + '</div>';
+      html += '<div class="tx-amount ' + (t.type === 'income' ? 'income' : 'expense') + '">' + (t.type === 'income' ? '+' : '-') + fmtMoney(t.amount) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  listEl.innerHTML = html;
+}
+
+// ── 거래 모달 ──
+window.setTxType = function(type) {
+  currentTxType = type;
+  document.querySelectorAll('.type-toggle button').forEach(b => {
+    const t = b.getAttribute('data-type');
+    b.classList.toggle('active', t === type);
+  });
+  renderCategoryOptions();
+};
+
+function renderCategoryOptions() {
+  const sel = document.getElementById('txCategory');
+  const cats = CATEGORIES[currentTxType] || [];
+  const cur = sel.value;
+  sel.innerHTML = cats.map(c => '<option value="'+esc(c.ko)+'">'+esc(c.ko)+' / '+esc(c.th)+'</option>').join('');
+  if (cats.find(c => c.ko === cur)) sel.value = cur;
+}
+
+window.openTxModal = function() {
+  editingTxId = null;
+  document.getElementById('txModalTitle').innerHTML = '거래 추가<span class="th">เพิ่มรายการ</span>';
+  document.getElementById('txDeleteBtn').style.display = 'none';
+  document.getElementById('txDate').value = todayStr();
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txMemo').value = '';
+  setTxType('expense');
+  document.getElementById('txModal').classList.add('open');
+  setTimeout(() => document.getElementById('txAmount').focus(), 50);
+};
+
+window.closeTxModal = function() {
+  document.getElementById('txModal').classList.remove('open');
+};
+
+window.editTx = function(id) {
+  const t = txCache.find(x => x.id === id);
+  if (!t) return;
+  editingTxId = id;
+  document.getElementById('txModalTitle').innerHTML = '거래 수정<span class="th">แก้ไขรายการ</span>';
+  document.getElementById('txDeleteBtn').style.display = '';
+  document.getElementById('txDate').value = t.date || todayStr();
+  document.getElementById('txAmount').value = t.amount || '';
+  document.getElementById('txMemo').value = t.memo || '';
+  setTxType(t.type || 'expense');
+  setTimeout(() => {
+    const sel = document.getElementById('txCategory');
+    sel.value = t.category || (CATEGORIES[currentTxType][0] && CATEGORIES[currentTxType][0].ko) || '';
+  }, 0);
+  document.getElementById('txModal').classList.add('open');
+};
+
+window.saveTx = async function() {
+  const date = document.getElementById('txDate').value;
+  const amount = parseInt(document.getElementById('txAmount').value, 10);
+  const category = document.getElementById('txCategory').value;
+  const memo = document.getElementById('txMemo').value.trim();
+  if (!date) { showNotif('날짜를 입력해주세요 / กรุณาเลือกวันที่', true); return; }
+  if (!amount || amount <= 0) { showNotif('금액을 입력해주세요 / กรุณาใส่จำนวนเงิน', true); return; }
+  if (!category) { showNotif('카테고리를 선택해주세요 / กรุณาเลือกหมวดหมู่', true); return; }
+  const data = {
+    type: currentTxType,
+    amount: amount,
+    category: category,
+    date: date,
+    monthKey: date.slice(0, 7),
+    memo: memo,
+    updatedAt: serverTimestamp(),
+    updatedBy: currentUser.email
+  };
+  const btn = document.getElementById('txSaveBtn');
+  btn.disabled = true; btn.textContent = '저장 중... / กำลังบันทึก...';
+  try {
+    if (editingTxId) {
+      await updateDoc(doc(db, 'transactions', editingTxId), data);
+      showNotif('수정되었습니다 / แก้ไขแล้ว');
+    } else {
+      data.createdAt = serverTimestamp();
+      data.createdBy = currentUser.email;
+      await addDoc(collection(db, 'transactions'), data);
+      showNotif('등록되었습니다 / บันทึกแล้ว');
+    }
+    closeTxModal();
+  } catch(e) { showNotif('저장 실패 / บันทึกไม่สำเร็จ: ' + e.message, true); }
+  btn.disabled = false; btn.textContent = '저장 / บันทึก';
+};
+
+window.deleteTx = async function() {
+  if (!editingTxId) return;
+  if (!confirm('이 거래를 삭제하시겠습니까?\nลบรายการนี้ใช่หรือไม่?')) return;
+  try {
+    await deleteDoc(doc(db, 'transactions', editingTxId));
+    showNotif('삭제되었습니다 / ลบแล้ว');
+    closeTxModal();
+  } catch(e) { showNotif('삭제 실패 / ลบไม่สำเร็จ: ' + e.message, true); }
+};
+
+// ── 가족 관리 ──
+window.openFamilyModal = async function() {
+  if (currentUser.role !== 'admin') return;
+  document.getElementById('familyModal').classList.add('open');
+  await refreshFamilyList();
+};
+
+async function refreshFamilyList() {
+  try {
+    const snap = await getDocs(collection(db, 'familyMembers'));
+    familyCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderFamilyList();
+  } catch(e) { showNotif('가족 목록 로딩 실패 / โหลดสมาชิกไม่สำเร็จ: ' + e.message, true); }
+}
+
+function renderFamilyList() {
+  const el = document.getElementById('famList');
+  if (!familyCache.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:12px;">등록된 가족이 없습니다<br>ยังไม่มีสมาชิก</div>';
+    return;
+  }
+  el.innerHTML = familyCache.map(m =>
+    '<div class="member-row">'
+    + '<div style="flex:1;min-width:0;">'
+    + '<div class="name">' + esc(m.name || m.email) + '</div>'
+    + '<div class="email">' + esc(m.email) + '</div>'
+    + '</div>'
+    + '<span class="role">' + esc((m.role || 'member').toUpperCase()) + '</span>'
+    + (m.email !== currentUser.email
+        ? '<button class="btn btn-danger btn-sm" onclick="removeFamilyMember(\''+esc(m.email)+'\')">제외/ลบ</button>'
+        : '<span style="font-size:10px;color:var(--text-dim);">(본인 / ฉัน)</span>')
+    + '</div>'
+  ).join('');
+}
+
+window.addFamilyMember = async function() {
+  const email = document.getElementById('famEmail').value.trim().toLowerCase();
+  const name = document.getElementById('famName').value.trim();
+  if (!email || !email.includes('@')) { showNotif('유효한 이메일을 입력해주세요 / กรุณาใส่อีเมลที่ถูกต้อง', true); return; }
+  if (!name) { showNotif('이름을 입력해주세요 / กรุณาใส่ชื่อ', true); return; }
+  try {
+    await setDoc(doc(db, 'familyMembers', email), {
+      email: email,
+      name: name,
+      role: 'member',
+      addedAt: serverTimestamp(),
+      addedBy: currentUser.email
+    });
+    document.getElementById('famEmail').value = '';
+    document.getElementById('famName').value = '';
+    showNotif(name + ' 추가 완료 / เพิ่มแล้ว');
+    await refreshFamilyList();
+  } catch(e) { showNotif('추가 실패 / เพิ่มไม่สำเร็จ: ' + e.message, true); }
+};
+
+window.removeFamilyMember = async function(email) {
+  if (!confirm(email + ' 님을 가족에서 제외하시겠습니까?\nลบ ' + email + ' จากครอบครัวใช่หรือไม่?')) return;
+  try {
+    await deleteDoc(doc(db, 'familyMembers', email));
+    showNotif('제외되었습니다 / ลบแล้ว');
+    await refreshFamilyList();
+  } catch(e) { showNotif('제외 실패 / ลบไม่สำเร็จ: ' + e.message, true); }
+};
+
+document.getElementById('familyModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+renderCategoryOptions();
+</script>
+
+</body>
+</html>
