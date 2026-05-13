@@ -576,6 +576,8 @@ let familyCache = [];
 let currentView = 'list'; // 'list' | 'calendar'
 let currentDayDetail = null; // YYYY-MM-DD
 let fixedExpensesCache = [];
+let familyMembersMap = {}; // email -> { name, color }
+const MEMBER_COLORS = ['#60a5fa','#f472b6','#34d399','#fbbf24','#a78bfa','#fb923c','#22d3ee','#fb7185'];
 let editingFixedId = null;
 let eventsCache = [];
 let editingEventId = null;
@@ -657,6 +659,41 @@ async function translateText(text, fromLang, toLang) {
   }
 }
 
+// 가족 구성원 캐시 구독 — 거래 등록자 표시용
+let familyMembersUnsub = null;
+function subscribeFamilyMembers() {
+  if (familyMembersUnsub) return;
+  familyMembersUnsub = onSnapshot(collection(db, 'familyMembers'), (snap) => {
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // 추가 순서 안정성 위해 addedAt 또는 id 기준 정렬
+    docs.sort((a,b) => {
+      const aT = a.addedAt?.seconds || 0, bT = b.addedAt?.seconds || 0;
+      if (aT !== bT) return aT - bT;
+      return (a.id||'').localeCompare(b.id||'');
+    });
+    const map = {};
+    docs.forEach((d, i) => {
+      map[d.email || d.id] = {
+        name: d.name || (d.email||d.id||'').split('@')[0],
+        color: MEMBER_COLORS[i % MEMBER_COLORS.length]
+      };
+    });
+    familyMembersMap = map;
+    // 거래/이벤트 표시 갱신 (이미 그려진 상태에서 멤버 캐시가 늦게 도착할 수 있음)
+    if (typeof renderTxList === 'function') renderTxList();
+    if (currentDayDetail) renderDayDetail();
+  }, (err) => { console.warn('familyMembers snapshot', err); });
+}
+
+// 등록자 칩: 색상 점 + 이름 첫 2자
+function memberChip(email) {
+  if (!email) return '';
+  const m = familyMembersMap[email];
+  if (!m) return '';
+  const short = m.name.slice(0, 2);
+  return '<span class="member-chip" title="'+esc(m.name)+'" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.04);border:1px solid '+m.color+'40;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600;color:'+m.color+';white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:'+m.color+';"></span>'+esc(short)+'</span>';
+}
+
 // 메모 표시: 한국어/태국어 둘 다 저장돼 있으면 함께 보여줌
 function renderMemoBilingual(t) {
   // 신규 레코드: memoKo + memoTh 둘 다 있음
@@ -722,6 +759,7 @@ onAuthStateChanged(auth, async (user) => {
     subscribeMonth();
     subscribeFixedExpenses();
     subscribeFamilyEvents();
+    subscribeFamilyMembers();
     setMainTab(currentMainTab);
   } catch(e) {
     console.error(e);
@@ -811,6 +849,7 @@ function renderTxList() {
       html += '<div class="tx-item" onclick="editTx(\'' + esc(t.id) + '\')">';
       html += '<span class="tx-cat">' + esc(getCategoryLabel(t.category)) + '</span>';
       html += '<div class="tx-memo">' + renderMemoBilingual(t) + '</div>';
+      html += memberChip(t.createdBy);
       html += '<div class="tx-amount ' + (t.type === 'income' ? 'income' : 'expense') + '">' + (t.type === 'income' ? '+' : '-') + fmtMoney(t.amount) + '</div>';
       html += '</div>';
     });
@@ -917,6 +956,7 @@ function renderDayDetail() {
     return '<div class="tx-item" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;" onclick="document.getElementById(\'dayDetailModal\').classList.remove(\'open\');editTx(\'' + esc(t.id) + '\')">'
       + '<span class="tx-cat">' + esc(getCategoryLabel(t.category)) + '</span>'
       + '<div class="tx-memo">' + renderMemoBilingual(t) + '</div>'
+      + memberChip(t.createdBy)
       + '<div class="tx-amount ' + (t.type === 'income' ? 'income' : 'expense') + '">' + (t.type === 'income' ? '+' : '-') + fmtMoney(t.amount) + '</div>'
       + '</div>';
   }).join('');
