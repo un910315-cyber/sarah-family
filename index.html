@@ -547,7 +547,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, where, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -717,11 +717,26 @@ window.authLogin = async function() {
   try {
     await signInWithPopup(auth, provider);
   } catch(e) {
+    // 사용자가 직접 취소한 경우는 무시
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    // 팝업 차단 / 모바일 등에서는 redirect로 fallback
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || /popup/i.test(e.message||'')) {
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch(e2) {
+        document.getElementById('loginError').textContent = '로그인 실패 / เข้าสู่ระบบไม่สำเร็จ: ' + e2.message;
+        document.getElementById('loginError').classList.add('show');
+        return;
+      }
+    }
     document.getElementById('loginError').textContent = '로그인 실패 / เข้าสู่ระบบไม่สำเร็จ: ' + e.message;
     document.getElementById('loginError').classList.add('show');
   }
 };
+
+// 페이지 로드 시 redirect 결과 자동 처리 (signInWithRedirect 사용된 경우)
+getRedirectResult(auth).catch(e => { console.warn('redirect result error', e); });
 window.authLogout = async function() {
   if (!confirm('로그아웃하시겠습니까?\nออกจากระบบใช่หรือไม่?')) return;
   if (txUnsub) { txUnsub(); txUnsub = null; }
