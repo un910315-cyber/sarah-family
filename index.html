@@ -41,11 +41,27 @@
   /* PC 3-column 레이아웃 (1100px+) */
   .layout { display: block; }
   @media (min-width: 1100px) {
-    .layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 18px; max-width: 1400px; margin: 0 auto; padding: 20px 18px 80px; align-items: start; }
+    .layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 18px; max-width: 1400px; margin: 0 auto; padding: 20px 18px 80px; align-items: start; transition: grid-template-columns 0.2s; }
     main { max-width: none; margin: 0; padding: 0; }
     .side-col { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow-y: auto; }
     .main-tabs { display: none !important; }
+    /* 고정지출 확장 모드 — 가계부·특이사항 숨김, 고정지출 풀스크린 */
+    .layout.fixed-expanded { grid-template-columns: 1fr; max-width: 900px; }
+    .layout.fixed-expanded > main,
+    .layout.fixed-expanded > #sideEvents { display: none; }
+    .layout.fixed-expanded > #sideFixed { position: static; max-height: none; }
+    /* 특이사항 확장 모드 */
+    .layout.events-expanded { grid-template-columns: 1fr; max-width: 900px; }
+    .layout.events-expanded > main,
+    .layout.events-expanded > #sideFixed { display: none; }
+    .layout.events-expanded > #sideEvents { position: static; max-height: none; }
   }
+  .side-expand-btn { background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 5px; margin-left: auto; transition: color .15s, background .15s; }
+  .side-expand-btn:hover { color: var(--accent); background: var(--surface2); }
+  .side-back-btn { display: none; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 12px; align-items: center; gap: 6px; }
+  .side-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .layout.fixed-expanded #fixedBackBtn,
+  .layout.events-expanded #eventsBackBtn { display: inline-flex; }
   @media (max-width: 1099px) {
     .side-col { display: none; }
     .side-col.active-tab { display: block; max-width: 820px; margin: 0 auto; padding: 0 16px 80px; }
@@ -265,7 +281,8 @@
     <!-- 좌측: 특이사항 -->
     <aside class="side-col" id="sideEvents" data-mtab-pane="events">
       <div>
-        <div class="side-title">📌 특이사항<span class="th">กิจกรรมพิเศษ</span></div>
+        <button class="side-back-btn" id="eventsBackBtn" onclick="toggleExpand('events',false)">← 가계부로 돌아가기 / กลับ</button>
+        <div class="side-title">📌 특이사항<span class="th">กิจกรรมพิเศษ</span><button class="side-expand-btn" onclick="toggleExpand('events')" title="크게 보기">⤢</button></div>
         <div class="side-sub">가족 행사·여행·캠핑 등<br><span style="opacity:0.85;">งานครอบครัว · ทริป · แคมป์</span></div>
         <button class="btn btn-primary btn-sm" onclick="openEventModal()" style="width:100%;margin-bottom:10px;">+ 일정 추가<span class="th">เพิ่มกิจกรรม</span></button>
         <div id="eventList"></div>
@@ -342,7 +359,8 @@
     <!-- 우측: 고정지출 -->
     <aside class="side-col" id="sideFixed" data-mtab-pane="fixed">
       <div>
-        <div class="side-title">🔁 고정지출<span class="th">รายจ่ายประจำ</span></div>
+        <button class="side-back-btn" id="fixedBackBtn" onclick="toggleExpand('fixed',false)">← 가계부로 돌아가기 / กลับ</button>
+        <div class="side-title">🔁 고정지출<span class="th">รายจ่ายประจำ</span><button class="side-expand-btn" onclick="toggleExpand('fixed')" title="크게 보기">⤢</button></div>
         <div class="side-sub">매달 반복되는 지출<br><span style="opacity:0.85;">รายจ่ายที่เกิดทุกเดือน</span></div>
         <button class="btn btn-primary btn-sm" onclick="openFixedModal()" style="width:100%;margin-bottom:10px;">+ 항목 추가<span class="th">เพิ่มรายการ</span></button>
         <div id="fixedSideList"></div>
@@ -1263,6 +1281,17 @@ window.setMainTab = function(tab) {
   currentMainTab = tab;
   document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-mtab') === tab));
   document.querySelectorAll('[data-mtab-pane]').forEach(p => p.classList.toggle('active-tab', p.getAttribute('data-mtab-pane') === tab));
+};
+
+// ── PC 확장 모드 (사이드 풀스크린) ──
+window.toggleExpand = function(which, forceState) {
+  const layout = document.querySelector('.layout');
+  if (!layout) return;
+  const cls = which + '-expanded';
+  const otherCls = (which === 'fixed' ? 'events' : 'fixed') + '-expanded';
+  const willExpand = (typeof forceState === 'boolean') ? forceState : !layout.classList.contains(cls);
+  layout.classList.remove(otherCls); // 동시에 두 개 켜지지 않게
+  layout.classList.toggle(cls, willExpand);
 };
 
 // ── 특이사항(가족 일정) ──
