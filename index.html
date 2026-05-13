@@ -38,6 +38,51 @@
 
   main { max-width: 820px; margin: 0 auto; padding: 20px 16px 80px; }
 
+  /* PC 3-column 레이아웃 (1100px+) */
+  .layout { display: block; }
+  @media (min-width: 1100px) {
+    .layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 18px; max-width: 1400px; margin: 0 auto; padding: 20px 18px 80px; align-items: start; }
+    main { max-width: none; margin: 0; padding: 0; }
+    .side-col { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow-y: auto; }
+    .main-tabs { display: none !important; }
+  }
+  @media (max-width: 1099px) {
+    .side-col { display: none; }
+    .side-col.active-tab { display: block; max-width: 820px; margin: 0 auto; padding: 0 16px 80px; }
+    .side-col.active-tab > div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  }
+
+  /* 메인 탭 (모바일 전용) */
+  .main-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 12px; gap: 0; position: sticky; top: 56px; z-index: 40; overflow-x: auto; }
+  .main-tab { padding: 12px 14px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-dim); border-bottom: 2px solid transparent; white-space: nowrap; letter-spacing: 0.3px; }
+  .main-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+  .main-tab .th { display: block; font-size: 10px; opacity: 0.7; margin-top: 1px; font-weight: 500; }
+
+  /* 사이드 컬럼 헤더 */
+  .side-title { font-size: 13px; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .side-title .th { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+  .side-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
+
+  /* 고정지출 사이드 */
+  .fixed-side-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color .15s; }
+  .fixed-side-item:hover { border-color: var(--accent); }
+  .fixed-side-item.inactive { opacity: 0.45; }
+  .fixed-side-item .day-pill { background: var(--bg); color: var(--text-dim); padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono',monospace; min-width: 28px; text-align: center; }
+  .fixed-side-item .nm { flex: 1; font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fixed-side-item .amt { font-family: 'JetBrains Mono',monospace; font-weight: 700; font-size: 12px; color: var(--expense); white-space: nowrap; }
+  .fixed-side-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .fixed-side-total .lab { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+  .fixed-side-total .v { font-family: 'JetBrains Mono',monospace; font-weight: 800; font-size: 16px; color: var(--expense); }
+
+  /* 특이사항 */
+  .event-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; transition: border-color .15s; }
+  .event-item:hover { border-color: var(--accent); }
+  .event-item.past { opacity: 0.5; }
+  .event-item .ev-date { font-size: 11px; color: var(--accent); font-weight: 700; font-family: 'JetBrains Mono',monospace; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .event-item .ev-dleft { font-size: 10px; color: var(--text-dim); background: var(--bg); padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+  .event-item .ev-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .event-item .ev-desc { font-size: 11px; color: var(--text-dim); line-height: 1.4; white-space: pre-wrap; }
+
   /* MONTH NAV */
   .month-nav { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
   .month-nav button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 8px; font-size: 16px; }
@@ -209,7 +254,26 @@
     <div class="header-right" id="headerRight"></div>
   </div>
 
-  <main>
+  <!-- 모바일 탭 (PC에서는 display:none) -->
+  <div class="main-tabs">
+    <div class="main-tab" data-mtab="events" onclick="setMainTab('events')">📌 특이사항<span class="th">กิจกรรม</span></div>
+    <div class="main-tab active" data-mtab="ledger" onclick="setMainTab('ledger')">📋 가계부<span class="th">บัญชี</span></div>
+    <div class="main-tab" data-mtab="fixed" onclick="setMainTab('fixed')">🔁 고정지출<span class="th">รายจ่ายประจำ</span></div>
+  </div>
+
+  <div class="layout">
+    <!-- 좌측: 특이사항 -->
+    <aside class="side-col" id="sideEvents" data-mtab-pane="events">
+      <div>
+        <div class="side-title">📌 특이사항<span class="th">กิจกรรมพิเศษ</span></div>
+        <div class="side-sub">가족 행사·여행·캠핑 등<br><span style="opacity:0.85;">งานครอบครัว · ทริป · แคมป์</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openEventModal()" style="width:100%;margin-bottom:10px;">+ 일정 추가<span class="th">เพิ่มกิจกรรม</span></button>
+        <div id="eventList"></div>
+      </div>
+    </aside>
+
+    <!-- 가운데: 가계부 -->
+    <main data-mtab-pane="ledger">
     <!-- 월 네비게이션 -->
     <div class="month-nav">
       <button onclick="changeMonth(-1)" title="이전 달 / เดือนก่อนหน้า">‹</button>
@@ -274,6 +338,18 @@
       </div>
     </div>
   </main>
+
+    <!-- 우측: 고정지출 -->
+    <aside class="side-col" id="sideFixed" data-mtab-pane="fixed">
+      <div>
+        <div class="side-title">🔁 고정지출<span class="th">รายจ่ายประจำ</span></div>
+        <div class="side-sub">매달 반복되는 지출<br><span style="opacity:0.85;">รายจ่ายที่เกิดทุกเดือน</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openFixedModal()" style="width:100%;margin-bottom:10px;">+ 항목 추가<span class="th">เพิ่มรายการ</span></button>
+        <div id="fixedSideList"></div>
+        <div class="fixed-side-total"><div class="lab">총 / รวม</div><div class="v" id="fixedSideTotal">₩0</div></div>
+      </div>
+    </aside>
+  </div>
 </div>
 
 <!-- 거래 추가/수정 모달 -->
@@ -398,6 +474,41 @@
   </div>
 </div>
 
+<!-- 특이사항(일정) 추가/수정 모달 -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <div class="modal-title" id="eventModalTitle">일정 추가<span class="th">เพิ่มกิจกรรม</span></div>
+      <button class="modal-close" onclick="document.getElementById('eventModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">날짜 *<span class="th">วันที่</span></label>
+          <input class="form-input" type="date" id="evDate" onclick="this.showPicker&&this.showPicker()" style="cursor:pointer;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">종료일<span class="th">วันสิ้นสุด</span></label>
+          <input class="form-input" type="date" id="evEndDate" onclick="this.showPicker&&this.showPicker()" style="cursor:pointer;" placeholder="선택">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">제목 *<span class="th">หัวข้อ</span></label>
+        <input class="form-input" id="evTitle" placeholder="예: 제주도 여행 / ทริปเชจู">
+      </div>
+      <div class="form-group">
+        <label class="form-label">설명<span class="th">รายละเอียด</span></label>
+        <textarea class="form-textarea" id="evDesc" placeholder="선택 입력 / ใส่หรือไม่ก็ได้"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-danger btn-sm" id="evDeleteBtn" onclick="deleteEvent()" style="display:none;margin-right:auto;">삭제 / ลบ</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('eventModal').classList.remove('open')">취소 / ยกเลิก</button>
+        <button class="btn btn-primary" id="evSaveBtn" onclick="saveEvent()">저장 / บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 일별 상세 모달 -->
 <div class="modal-overlay" id="dayDetailModal">
   <div class="modal" style="max-width:460px;">
@@ -448,6 +559,9 @@ let currentView = 'list'; // 'list' | 'calendar'
 let currentDayDetail = null; // YYYY-MM-DD
 let fixedExpensesCache = [];
 let editingFixedId = null;
+let eventsCache = [];
+let editingEventId = null;
+let currentMainTab = 'ledger'; // 'events' | 'ledger' | 'fixed'
 
 // ── 카테고리 (한/태 매핑) ──
 // 키는 ko (DB 저장용), 표시는 둘 다
@@ -545,6 +659,8 @@ onAuthStateChanged(auth, async (user) => {
     if (currentUser.role === 'admin') document.getElementById('familyBtn').style.display = '';
     subscribeMonth();
     subscribeFixedExpenses();
+    subscribeFamilyEvents();
+    setMainTab(currentMainTab);
   } catch(e) {
     console.error(e);
     document.getElementById('loadingScreen').style.display = 'none';
@@ -1037,9 +1153,31 @@ window.toggleFixedActive = async function(id) {
   } catch(e) { showNotif('변경 실패: ' + e.message, true); }
 };
 
+function renderFixedSide() {
+  const el = document.getElementById('fixedSideList');
+  const totEl = document.getElementById('fixedSideTotal');
+  if (!el || !totEl) return;
+  const list = fixedExpensesCache.slice();
+  let total = 0;
+  list.forEach(f => { if (f.active !== false) total += Number(f.amount)||0; });
+  totEl.textContent = fmtMoney(total);
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:14px 6px;color:var(--text-dim);font-size:11px;line-height:1.6;">등록된 고정지출이 없습니다<br><span style="opacity:0.85;">ยังไม่มีรายจ่ายประจำ</span></div>';
+    return;
+  }
+  el.innerHTML = list.map(f =>
+    '<div class="fixed-side-item' + (f.active === false ? ' inactive' : '') + '" onclick="editFixed(\''+esc(f.id)+'\');openFixedModal()">'
+    + '<span class="day-pill">' + (f.dayOfMonth||1) + '일</span>'
+    + '<span class="nm">' + esc(f.name||'') + '</span>'
+    + '<span class="amt">-' + fmtMoney(f.amount) + '</span>'
+    + '</div>'
+  ).join('');
+}
+
 function renderFixedList() {
   const el = document.getElementById('fxList');
   if (!el) return;
+  renderFixedSide();
   if (!fixedExpensesCache.length) {
     el.innerHTML = '<div style="text-align:center;padding:24px 10px;color:var(--text-dim);font-size:12px;">등록된 고정지출이 없습니다<br><span style="opacity:0.85;">ยังไม่มีรายจ่ายประจำ</span></div>';
     return;
@@ -1119,6 +1257,132 @@ window.applyFixedToCurrentMonth = async function() {
   }
   showNotif(added + '건 추가됨 / เพิ่ม ' + added + ' รายการ' + (failed ? ' (' + failed + ' 실패)' : ''));
 };
+
+// ── 메인 탭 전환 (모바일) ──
+window.setMainTab = function(tab) {
+  currentMainTab = tab;
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-mtab') === tab));
+  document.querySelectorAll('[data-mtab-pane]').forEach(p => p.classList.toggle('active-tab', p.getAttribute('data-mtab-pane') === tab));
+};
+
+// ── 특이사항(가족 일정) ──
+let eventsUnsub = null;
+
+function subscribeFamilyEvents() {
+  if (eventsUnsub) return;
+  eventsUnsub = onSnapshot(collection(db, 'familyEvents'), (snap) => {
+    eventsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    eventsCache.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    renderEventList();
+  }, (err) => { console.error('familyEvents snapshot', err); });
+}
+
+function daysLeftLabel(dateStr) {
+  if (!dateStr) return '';
+  const today = new Date(todayStr());
+  const target = new Date(dateStr);
+  const diff = Math.round((target - today) / 86400000);
+  if (diff > 0) return 'D-' + diff;
+  if (diff === 0) return 'D-DAY';
+  return 'D+' + Math.abs(diff);
+}
+
+function renderEventList() {
+  const el = document.getElementById('eventList');
+  if (!el) return;
+  if (!eventsCache.length) {
+    el.innerHTML = '<div style="text-align:center;padding:14px 6px;color:var(--text-dim);font-size:11px;line-height:1.6;">등록된 일정이 없습니다<br><span style="opacity:0.85;">ยังไม่มีกิจกรรม</span></div>';
+    return;
+  }
+  // 다가오는 일정 먼저, 그 다음 지난 일정
+  const today = todayStr();
+  const upcoming = eventsCache.filter(e => (e.endDate || e.date) >= today);
+  const past = eventsCache.filter(e => (e.endDate || e.date) < today).reverse();
+  const ordered = upcoming.concat(past);
+  el.innerHTML = ordered.map(e => {
+    const isPast = (e.endDate || e.date) < today;
+    const dateLabel = e.date + (e.endDate && e.endDate !== e.date ? ' ~ ' + e.endDate : '');
+    const dLeft = !isPast ? daysLeftLabel(e.date) : '';
+    return '<div class="event-item' + (isPast ? ' past' : '') + '" onclick="editEvent(\''+esc(e.id)+'\')">'
+      + '<div class="ev-date">' + esc(dateLabel) + (dLeft ? '<span class="ev-dleft">' + esc(dLeft) + '</span>' : '') + '</div>'
+      + '<div class="ev-title">' + esc(e.title || '') + '</div>'
+      + (e.description ? '<div class="ev-desc">' + esc(e.description) + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+window.openEventModal = function() {
+  editingEventId = null;
+  document.getElementById('eventModalTitle').innerHTML = '일정 추가<span class="th">เพิ่มกิจกรรม</span>';
+  document.getElementById('evDeleteBtn').style.display = 'none';
+  document.getElementById('evDate').value = todayStr();
+  document.getElementById('evEndDate').value = '';
+  document.getElementById('evTitle').value = '';
+  document.getElementById('evDesc').value = '';
+  document.getElementById('eventModal').classList.add('open');
+  setTimeout(() => document.getElementById('evTitle').focus(), 50);
+};
+
+window.editEvent = function(id) {
+  const e = eventsCache.find(x => x.id === id);
+  if (!e) return;
+  editingEventId = id;
+  document.getElementById('eventModalTitle').innerHTML = '일정 수정<span class="th">แก้ไขกิจกรรม</span>';
+  document.getElementById('evDeleteBtn').style.display = '';
+  document.getElementById('evDate').value = e.date || todayStr();
+  document.getElementById('evEndDate').value = e.endDate || '';
+  document.getElementById('evTitle').value = e.title || '';
+  document.getElementById('evDesc').value = e.description || '';
+  document.getElementById('eventModal').classList.add('open');
+};
+
+window.saveEvent = async function() {
+  const date = document.getElementById('evDate').value;
+  const endDate = document.getElementById('evEndDate').value;
+  const title = document.getElementById('evTitle').value.trim();
+  const description = document.getElementById('evDesc').value.trim();
+  if (!date) { showNotif('날짜를 입력해주세요 / กรุณาเลือกวันที่', true); return; }
+  if (!title) { showNotif('제목을 입력해주세요 / กรุณาใส่หัวข้อ', true); return; }
+  if (endDate && endDate < date) { showNotif('종료일이 시작일보다 빠릅니다 / วันสิ้นสุดอยู่ก่อนวันเริ่ม', true); return; }
+  const data = {
+    date: date,
+    endDate: endDate || '',
+    title: title,
+    description: description,
+    updatedAt: serverTimestamp(),
+    updatedBy: currentUser.email
+  };
+  const btn = document.getElementById('evSaveBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    if (editingEventId) {
+      await updateDoc(doc(db, 'familyEvents', editingEventId), data);
+      showNotif('수정되었습니다 / แก้ไขแล้ว');
+    } else {
+      data.createdAt = serverTimestamp();
+      data.createdBy = currentUser.email;
+      await addDoc(collection(db, 'familyEvents'), data);
+      showNotif('등록되었습니다 / บันทึกแล้ว');
+    }
+    document.getElementById('eventModal').classList.remove('open');
+  } catch(e) { showNotif('저장 실패 / บันทึกไม่สำเร็จ: ' + e.message, true); }
+  btn.disabled = false; btn.textContent = '저장 / บันทึก';
+};
+
+window.deleteEvent = async function() {
+  if (!editingEventId) return;
+  if (!confirm('이 일정을 삭제하시겠습니까?\nลบกิจกรรมนี้ใช่หรือไม่?')) return;
+  try {
+    await deleteDoc(doc(db, 'familyEvents', editingEventId));
+    showNotif('삭제되었습니다 / ลบแล้ว');
+    document.getElementById('eventModal').classList.remove('open');
+  } catch(e) { showNotif('삭제 실패 / ลบไม่สำเร็จ: ' + e.message, true); }
+};
+
+// 모달 백드롭 닫기
+document.getElementById('eventModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
 
 // ── 카드 알림 문자 파싱 ──
 const SMS_KEYWORDS = {
