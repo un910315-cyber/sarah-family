@@ -884,6 +884,9 @@ window.setTxType = function(type) {
   document.querySelectorAll('.type-toggle button').forEach(b => {
     const t = b.getAttribute('data-type');
     b.classList.toggle('active', t === type);
+    // CSS의 .active.expense / .active.income 매처가 동작하도록 type 클래스도 같이 토글
+    b.classList.toggle('expense', t === 'expense');
+    b.classList.toggle('income', t === 'income');
   });
   renderCategoryOptions();
 };
