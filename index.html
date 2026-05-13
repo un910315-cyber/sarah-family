@@ -623,6 +623,50 @@ const fmtMoney = (n) => '₩' + (Number(n)||0).toLocaleString('ko-KR');
 const monthKey = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 const todayStr = () => new Date().toISOString().split('T')[0];
 
+// ── 자동 번역 (MyMemory 무료 API, 키 불필요, 일 5000자 한도) ──
+// 한국어/태국어 자동 감지 후 반대 언어로 번역. 영문/숫자만이면 번역 안 함.
+function detectLang(text) {
+  if (!text) return null;
+  const hasKo = /[가-힣]/.test(text);
+  const hasTh = /[฀-๿]/.test(text);
+  if (hasKo && !hasTh) return 'ko';
+  if (hasTh && !hasKo) return 'th';
+  if (hasKo) return 'ko'; // 혼합이면 한국어 우선
+  return null;
+}
+
+async function translateText(text, fromLang, toLang) {
+  if (!text || !text.trim()) return '';
+  try {
+    // 3초 타임아웃
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + fromLang + '|' + toLang;
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!resp.ok) return '';
+    const data = await resp.json();
+    const out = data && data.responseData && data.responseData.translatedText;
+    if (!out) return '';
+    // MyMemory가 가끔 'MYMEMORY WARNING' 같은 메시지 반환 — 필터
+    if (/^MYMEMORY|^PLEASE SELECT/i.test(out)) return '';
+    return out.trim();
+  } catch(e) {
+    console.warn('translate failed:', e.message || e);
+    return '';
+  }
+}
+
+// 메모 표시: 한국어/태국어 둘 다 저장돼 있으면 함께 보여줌
+function renderMemoBilingual(t) {
+  // 신규 레코드: memoKo + memoTh 둘 다 있음
+  if (t.memoKo && t.memoTh) {
+    return esc(t.memoKo) + ' <span style="color:var(--text-dim);">/ ' + esc(t.memoTh) + '</span>';
+  }
+  // 옛 레코드: memo만 있음
+  return esc(t.memo) || '';
+}
+
 function showNotif(msg, isError) {
   const el = document.getElementById('notif');
   el.textContent = msg;
@@ -766,7 +810,7 @@ function renderTxList() {
     items.forEach(t => {
       html += '<div class="tx-item" onclick="editTx(\'' + esc(t.id) + '\')">';
       html += '<span class="tx-cat">' + esc(getCategoryLabel(t.category)) + '</span>';
-      html += '<div class="tx-memo">' + (esc(t.memo) || '') + '</div>';
+      html += '<div class="tx-memo">' + renderMemoBilingual(t) + '</div>';
       html += '<div class="tx-amount ' + (t.type === 'income' ? 'income' : 'expense') + '">' + (t.type === 'income' ? '+' : '-') + fmtMoney(t.amount) + '</div>';
       html += '</div>';
     });
@@ -872,7 +916,7 @@ function renderDayDetail() {
   listEl.innerHTML = items.map(t => {
     return '<div class="tx-item" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;" onclick="document.getElementById(\'dayDetailModal\').classList.remove(\'open\');editTx(\'' + esc(t.id) + '\')">'
       + '<span class="tx-cat">' + esc(getCategoryLabel(t.category)) + '</span>'
-      + '<div class="tx-memo">' + (esc(t.memo) || '') + '</div>'
+      + '<div class="tx-memo">' + renderMemoBilingual(t) + '</div>'
       + '<div class="tx-amount ' + (t.type === 'income' ? 'income' : 'expense') + '">' + (t.type === 'income' ? '+' : '-') + fmtMoney(t.amount) + '</div>'
       + '</div>';
   }).join('');
@@ -956,11 +1000,28 @@ window.saveTx = async function() {
     date: date,
     monthKey: date.slice(0, 7),
     memo: memo,
+    memoKo: '',
+    memoTh: '',
     updatedAt: serverTimestamp(),
     updatedBy: currentUser.email
   };
   const btn = document.getElementById('txSaveBtn');
   btn.disabled = true; btn.textContent = '저장 중... / กำลังบันทึก...';
+
+  // 메모 자동 번역 (한↔태)
+  if (memo) {
+    const src = detectLang(memo);
+    if (src === 'ko') {
+      btn.textContent = '번역 중... / กำลังแปล...';
+      const th = await translateText(memo, 'ko', 'th');
+      if (th) { data.memoKo = memo; data.memoTh = th; }
+    } else if (src === 'th') {
+      btn.textContent = '번역 중... / กำลังแปล...';
+      const ko = await translateText(memo, 'th', 'ko');
+      if (ko) { data.memoTh = memo; data.memoKo = ko; }
+    }
+  }
+
   try {
     if (editingTxId) {
       await updateDoc(doc(db, 'transactions', editingTxId), data);
