@@ -66,6 +66,8 @@
     .side-col { display: none; }
     .side-col.active-tab { display: block; max-width: 820px; margin: 0 auto; padding: 0 16px 80px; }
     .side-col.active-tab > div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    main[data-mtab-pane] { display: none; }
+    main[data-mtab-pane].active-tab { display: block; }
   }
 
   /* 메인 탭 (모바일 전용) */
@@ -173,9 +175,16 @@
   .tx-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
   .tx-item:last-child { border-bottom: none; }
   .tx-item:hover { background: rgba(245,158,11,0.04); }
-  .tx-cat { background: var(--surface2); padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text-dim); white-space: nowrap; }
+  .tx-cat { background: var(--surface2); padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text-dim); white-space: nowrap; align-self: flex-start; }
   .tx-cat .th { color: var(--text-dim); opacity: 0.7; margin-left: 3px; }
-  .tx-memo { flex: 1; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-memo { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: break-word; }
+  @media (max-width: 700px) {
+    .tx-item { align-items: flex-start; }
+    .tx-memo { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.45; }
+    .tx-amount { align-self: flex-start; }
+    .fixed-side-item { align-items: flex-start; }
+    .fixed-side-item .nm { white-space: normal; line-height: 1.45; }
+  }
   .tx-amount { font-family: 'JetBrains Mono',monospace; font-weight: 700; font-size: 14px; white-space: nowrap; }
   .tx-amount.income { color: var(--income); }
   .tx-amount.expense { color: var(--expense); }
@@ -290,7 +299,7 @@
     </aside>
 
     <!-- 가운데: 가계부 -->
-    <main data-mtab-pane="ledger">
+    <main data-mtab-pane="ledger" class="active-tab">
     <!-- 월 네비게이션 -->
     <div class="month-nav">
       <button onclick="changeMonth(-1)" title="이전 달 / เดือนก่อนหน้า">‹</button>
@@ -702,6 +711,27 @@ function renderMemoBilingual(t) {
   }
   // 옛 레코드: memo만 있음
   return esc(t.memo) || '';
+}
+
+// 임의 한↔태 필드 이중언어 표시 (고정지출 name, 특이사항 title/description 등)
+function renderBilingual(ko, th, fallback) {
+  if (ko && th) return esc(ko) + ' <span style="color:var(--text-dim);">/ ' + esc(th) + '</span>';
+  return esc(ko || th || fallback || '');
+}
+
+// 한국어/태국어 자동 감지 후 반대 언어로 번역해서 ko/th 쌍을 반환
+async function autoTranslatePair(text) {
+  if (!text || !text.trim()) return { ko: '', th: '' };
+  const src = detectLang(text);
+  if (src === 'ko') {
+    const th = await translateText(text, 'ko', 'th');
+    return th ? { ko: text, th } : { ko: text, th: '' };
+  }
+  if (src === 'th') {
+    const ko = await translateText(text, 'th', 'ko');
+    return ko ? { ko, th: text } : { ko: '', th: text };
+  }
+  return { ko: text, th: '' };
 }
 
 function showNotif(msg, isError) {
@@ -1245,15 +1275,29 @@ window.saveFixed = async function() {
   if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) { showNotif('날짜가 잘못되었습니다', true); return; }
   const data = {
     name: name,
+    nameKo: '',
+    nameTh: '',
     amount: amount,
     category: category,
     dayOfMonth: dayOfMonth,
     memo: memo,
+    memoKo: '',
+    memoTh: '',
     type: 'expense',
     active: true,
     updatedAt: serverTimestamp(),
     updatedBy: currentUser.email
   };
+  const btn = document.getElementById('fxSaveBtn');
+  const btnLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '번역 중... / กำลังแปล...'; }
+  // name + memo 자동 번역 (한↔태)
+  const [namePair, memoPair] = await Promise.all([
+    autoTranslatePair(name),
+    autoTranslatePair(memo)
+  ]);
+  data.nameKo = namePair.ko; data.nameTh = namePair.th;
+  data.memoKo = memoPair.ko; data.memoTh = memoPair.th;
   try {
     if (editingFixedId) {
       await updateDoc(doc(db, 'fixedExpenses', editingFixedId), data);
@@ -1266,6 +1310,7 @@ window.saveFixed = async function() {
     }
     resetFixedForm();
   } catch(e) { showNotif('저장 실패 / บันทึกไม่สำเร็จ: ' + e.message, true); }
+  if (btn) { btn.disabled = false; btn.textContent = btnLabel || '추가 / เพิ่ม'; }
 };
 
 window.deleteFixed = async function(id) {
@@ -1305,7 +1350,7 @@ function renderFixedSide() {
   el.innerHTML = list.map(f =>
     '<div class="fixed-side-item' + (f.active === false ? ' inactive' : '') + '" onclick="editFixed(\''+esc(f.id)+'\');openFixedModal()">'
     + '<span class="day-pill">' + (f.dayOfMonth||1) + '일</span>'
-    + '<span class="nm">' + esc(f.name||'') + '</span>'
+    + '<span class="nm">' + renderBilingual(f.nameKo, f.nameTh, f.name) + '</span>'
     + '<span class="amt">-' + fmtMoney(f.amount) + '</span>'
     + '</div>'
   ).join('');
@@ -1328,7 +1373,7 @@ function renderFixedList() {
       +     '<span class="tx-cat">' + esc(getCategoryLabel(f.category)) + '</span>'
       +     (f.active === false ? '<span style="font-size:10px;color:var(--text-dim);background:var(--bg);padding:2px 6px;border-radius:4px;">비활성 / ปิด</span>' : '')
       +   '</div>'
-      +   '<div style="font-size:12px;color:var(--text-dim);margin-top:3px;">' + esc(f.name||'') + (f.memo ? ' · ' + esc(f.memo) : '') + '</div>'
+      +   '<div style="font-size:12px;color:var(--text-dim);margin-top:3px;line-height:1.5;">' + renderBilingual(f.nameKo, f.nameTh, f.name) + ((f.memoKo && f.memoTh) || f.memo ? ' · ' + renderBilingual(f.memoKo, f.memoTh, f.memo) : '') + '</div>'
       + '</div>'
       + '<div style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:13px;color:var(--expense);white-space:nowrap;">-' + fmtMoney(f.amount) + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:3px;">'
@@ -1451,10 +1496,11 @@ function renderEventList() {
     const isPast = (e.endDate || e.date) < today;
     const dateLabel = e.date + (e.endDate && e.endDate !== e.date ? ' ~ ' + e.endDate : '');
     const dLeft = !isPast ? daysLeftLabel(e.date) : '';
+    const hasDesc = (e.descriptionKo && e.descriptionTh) || e.description;
     return '<div class="event-item' + (isPast ? ' past' : '') + '" onclick="editEvent(\''+esc(e.id)+'\')">'
       + '<div class="ev-date">' + esc(dateLabel) + (dLeft ? '<span class="ev-dleft">' + esc(dLeft) + '</span>' : '') + '</div>'
-      + '<div class="ev-title">' + esc(e.title || '') + '</div>'
-      + (e.description ? '<div class="ev-desc">' + esc(e.description) + '</div>' : '')
+      + '<div class="ev-title">' + renderBilingual(e.titleKo, e.titleTh, e.title) + '</div>'
+      + (hasDesc ? '<div class="ev-desc">' + renderBilingual(e.descriptionKo, e.descriptionTh, e.description) + '</div>' : '')
       + '</div>';
   }).join('');
 }
@@ -1496,12 +1542,23 @@ window.saveEvent = async function() {
     date: date,
     endDate: endDate || '',
     title: title,
+    titleKo: '',
+    titleTh: '',
     description: description,
+    descriptionKo: '',
+    descriptionTh: '',
     updatedAt: serverTimestamp(),
     updatedBy: currentUser.email
   };
   const btn = document.getElementById('evSaveBtn');
-  btn.disabled = true; btn.textContent = '저장 중...';
+  btn.disabled = true; btn.textContent = '번역 중... / กำลังแปล...';
+  // title + description 자동 번역 (한↔태)
+  const [titlePair, descPair] = await Promise.all([
+    autoTranslatePair(title),
+    autoTranslatePair(description)
+  ]);
+  data.titleKo = titlePair.ko; data.titleTh = titlePair.th;
+  data.descriptionKo = descPair.ko; data.descriptionTh = descPair.th;
   try {
     if (editingEventId) {
       await updateDoc(doc(db, 'familyEvents', editingEventId), data);
