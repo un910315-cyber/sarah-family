@@ -7,13 +7,39 @@
 - **Remote**: `github.com/un910315-cyber/sarah-family` (master 브랜치)
 - **Live**: `https://un910315-cyber.github.io/sarah-family/`
 - Push → GitHub Pages 자동 빌드, 약 1~2분 내 반영
+- **배포는 항상 Claude가 직접 수행** (수정 → 검증 → commit → push). 사용자에게 푸시 단계를 미루지 말 것.
+
+### ⚠️ PWA 배포 시 필수 절차
+
+**`sw.js` 상단의 `CACHE_VERSION` 문자열을 매번 갱신해야 사용자에게 새 버전이 전달됨.**
+
+```js
+const CACHE_VERSION = 'v1-2026-05-15';  // ← 배포할 때마다 변경
+```
+
+권장 형식: `vN-YYYY-MM-DD` (예: `v2-2026-05-20`). 하루에 여러 번이면 `v2-2026-05-20-2`처럼 suffix.
+
+**갱신을 빠뜨리면 어떻게 되나**: 가족들 기기에 이미 등록된 SW가 옛 `index.html`을 계속 캐시 응답으로 내보냄. 새 기능을 푸시해도 보이지 않음. SW 파일 내용이 바뀌어야 브라우저가 update를 트리거하므로 `CACHE_VERSION` 한 글자라도 바꾸는 것이 가장 확실.
+
+**index.html / icons / manifest 중 하나라도 수정하면** → `CACHE_VERSION` 갱신 필수.
+**이외 파일(README.md, CLAUDE.md 등)만 수정** → 갱신 불필요.
+
+체크리스트:
+1. 코드 수정
+2. (앱 셸에 영향 있으면) `sw.js`의 `CACHE_VERSION` 갱신
+3. `node --check sw.js` + manifest JSON 유효성 확인
+4. 한국어 커밋 → push
 
 ## 디렉토리
 
 ```
-/index.html        # 가계부 앱 본체 (단일 HTML, CSS/JS 인라인)
-/README.md         # 사용자용 소개
-/CLAUDE.md         # 이 문서
+/index.html              # 가계부 앱 본체 (단일 HTML, CSS/JS 인라인)
+/manifest.webmanifest    # PWA manifest (이름, 아이콘, theme color 등)
+/sw.js                   # 서비스 워커 (앱 셸 캐시) — CACHE_VERSION 갱신 주의
+/icons/icon-192.png      # PWA 아이콘 (홈 화면, 작은 크기)
+/icons/icon-512.png      # PWA 아이콘 (스플래시, 큰 크기)
+/README.md               # 사용자용 소개
+/CLAUDE.md               # 이 문서
 /.gitignore
 ```
 
