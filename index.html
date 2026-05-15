@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Sarah Family — 가계부 / สมุดบัญชี</title>
+<title>OurNest — 우리가족 가계부 / สมุดบัญชี</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f0f12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="가계부">
+<meta name="apple-mobile-web-app-title" content="OurNest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+Thai:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #0f0f12;
@@ -52,7 +53,9 @@
     .layout { display: grid; grid-template-columns: 260px 1fr 280px; gap: 18px; max-width: 1400px; margin: 0 auto; padding: 20px 18px 80px; align-items: start; transition: grid-template-columns 0.2s; }
     main { max-width: none; margin: 0; padding: 0; }
     .side-col { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow-y: auto; }
-    .main-tabs { display: none !important; }
+    /* PC: 메인탭에서 events/fixed는 사이드 컬럼에 있으니 숨김, ledger/budget만 노출 */
+    .main-tab[data-mtab="events"],
+    .main-tab[data-mtab="fixed"] { display: none; }
     /* 고정지출 확장 모드 — 가계부·특이사항 숨김, 고정지출 풀스크린 */
     .layout.fixed-expanded { grid-template-columns: 1fr; max-width: 900px; }
     .layout.fixed-expanded > main,
@@ -63,6 +66,13 @@
     .layout.events-expanded > main,
     .layout.events-expanded > #sideFixed { display: none; }
     .layout.events-expanded > #sideEvents { position: static; max-height: none; }
+    /* 예산 페이지 — PC 평소엔 숨김, budget-expanded에서만 풀스크린 */
+    main[data-mtab-pane="budget"] { display: none; }
+    .layout.budget-expanded { grid-template-columns: 1fr; max-width: 1000px; }
+    .layout.budget-expanded > main[data-mtab-pane="ledger"],
+    .layout.budget-expanded > #sideEvents,
+    .layout.budget-expanded > #sideFixed { display: none; }
+    .layout.budget-expanded > main[data-mtab-pane="budget"] { display: block; }
   }
   .side-expand-btn { background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 5px; margin-left: auto; transition: color .15s, background .15s; }
   .side-expand-btn:hover { color: var(--accent); background: var(--surface2); }
@@ -256,6 +266,54 @@
   .member-row .name { flex: 1; font-size: 13px; font-weight: 600; }
   .member-row .email { color: var(--text-dim); font-size: 11px; }
   .member-row .role { font-size: 10px; background: rgba(245,158,11,0.18); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+
+  /* BUDGET PAGE */
+  .budget-page { padding-bottom: 80px; }
+  .budget-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .budget-header .budget-title { flex: 1; font-size: 17px; font-weight: 800; letter-spacing: 0.3px; }
+  .budget-header .budget-title .th { display: inline-block; font-size: 11px; color: var(--text-dim); font-weight: 500; margin-left: 6px; }
+  .budget-back-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 8px; font-size: 18px; cursor: pointer; }
+  @media (min-width: 1100px) { .budget-back-btn { display: none; } }
+  .budget-overall { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 18px; }
+  .bo-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; }
+  .bo-row .bo-lab { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+  .bo-row .bo-lab .th { display: inline-block; font-size: 10px; opacity: 0.7; margin-left: 4px; }
+  .bo-row .bo-val { font-family: 'JetBrains Mono',monospace; font-size: 16px; font-weight: 800; }
+  .bo-row:nth-child(2) .bo-val { color: var(--expense); }
+  .bo-row:nth-child(3) .bo-val { color: var(--accent); }
+  .bo-bar { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-top: 10px; }
+  .bo-bar-fill { height: 100%; background: var(--income); transition: width .3s, background .3s; width: 0%; }
+  .bo-bar-fill.warn { background: #f59e0b; }
+  .bo-bar-fill.over { background: var(--expense); }
+
+  .budget-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .bsec-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; letter-spacing: 0.3px; }
+  .bsec-title .th { display: inline-block; font-size: 10px; color: var(--text-dim); font-weight: 500; margin-left: 6px; }
+
+  /* 카테고리 진행률 행 */
+  .bcat-row { padding: 10px 0; border-bottom: 1px dashed var(--border); }
+  .bcat-row:last-child { border-bottom: none; }
+  .bcat-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .bcat-head .bcat-name { font-size: 12px; font-weight: 700; }
+  .bcat-head .bcat-name .th { font-size: 10px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+  .bcat-head .bcat-nums { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--text-dim); }
+  .bcat-head .bcat-nums .used { font-weight: 700; color: var(--text); }
+  .bcat-head .bcat-nums .over { color: var(--expense); }
+  .bcat-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; position: relative; }
+  .bcat-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--income); transition: width .25s, background .25s; }
+  .bcat-bar-fill.warn { background: #f59e0b; }
+  .bcat-bar-fill.over { background: var(--expense); }
+
+  .chart-wrap { position: relative; height: 280px; }
+  @media (max-width: 500px) { .chart-wrap { height: 220px; } }
+
+  /* 예산 편집 모달 — 카테고리 줄 */
+  .budget-edit-row { display: grid; grid-template-columns: 1fr 160px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .budget-edit-row:last-child { border-bottom: none; }
+  .budget-edit-row .nm { font-size: 12px; font-weight: 600; }
+  .budget-edit-row .nm .th { display: block; font-size: 10px; color: var(--text-dim); font-weight: 500; margin-top: 1px; }
+  .budget-edit-row input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 7px; font-size: 13px; font-family: 'JetBrains Mono',monospace; text-align: right; width: 100%; }
+  .budget-edit-row input:focus { outline: none; border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -270,7 +328,7 @@
 <div class="login-screen" id="loginScreen" style="display:none;">
   <div class="login-card">
     <div style="font-size:36px;margin-bottom:6px;">💰</div>
-    <h1>Sarah Family</h1>
+    <h1>OurNest</h1>
     <div class="sub">우리가족 가계부<span class="th">สมุดบัญชีครอบครัวเรา</span><br>Google 계정으로 로그인하세요<span class="th" style="margin-top:2px;">เข้าสู่ระบบด้วยบัญชี Google</span></div>
     <button class="google-btn" id="googleLoginBtn" onclick="authLogin()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571c.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
@@ -283,7 +341,7 @@
 <!-- 메인 -->
 <div id="app" style="display:none;">
   <div class="header">
-    <div class="logo"><span>💰</span> Sarah Family <span class="badge">가계부 / บัญชี</span></div>
+    <div class="logo"><span>💰</span> OurNest <span class="badge">가계부 / บัญชี</span></div>
     <div class="header-right" id="headerRight"></div>
   </div>
 
@@ -291,6 +349,7 @@
   <div class="main-tabs">
     <div class="main-tab" data-mtab="events" onclick="setMainTab('events')">📌 특이사항<span class="th">กิจกรรม</span></div>
     <div class="main-tab active" data-mtab="ledger" onclick="setMainTab('ledger')">📋 가계부<span class="th">บัญชี</span></div>
+    <div class="main-tab" data-mtab="budget" onclick="setMainTab('budget')">💰 예산<span class="th">งบประมาณ</span></div>
     <div class="main-tab" data-mtab="fixed" onclick="setMainTab('fixed')">🔁 고정지출<span class="th">รายจ่ายประจำ</span></div>
   </div>
 
@@ -372,6 +431,55 @@
       </div>
     </div>
   </main>
+
+    <!-- 예산 페이지 (PC: budget-expanded일 때 풀스크린, 모바일: budget 탭) -->
+    <main data-mtab-pane="budget" class="budget-page">
+      <div class="budget-header">
+        <button class="budget-back-btn" onclick="setMainTab('ledger')" title="가계부로 돌아가기 / กลับ">←</button>
+        <div class="budget-title">💰 예산<span class="th">งบประมาณ</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openBudgetEditor()">✎ 예산 편집<span class="th">แก้ไข</span></button>
+      </div>
+      <div class="month-nav" style="margin-bottom:14px;">
+        <button onclick="changeMonth(-1)">‹</button>
+        <div class="label" id="budgetMonthLabel">—</div>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+
+      <!-- 총괄 카드 -->
+      <div class="budget-overall" id="budgetOverall">
+        <div class="bo-row">
+          <div class="bo-lab">이번 달 예산<span class="th">งบ</span></div>
+          <div class="bo-val" id="boTotalBudget">₩0</div>
+        </div>
+        <div class="bo-row">
+          <div class="bo-lab">사용<span class="th">ใช้แล้ว</span></div>
+          <div class="bo-val" id="boTotalSpent">₩0</div>
+        </div>
+        <div class="bo-row">
+          <div class="bo-lab">잔여<span class="th">คงเหลือ</span></div>
+          <div class="bo-val" id="boTotalRemain">₩0</div>
+        </div>
+        <div class="bo-bar"><div class="bo-bar-fill" id="boBarFill"></div></div>
+      </div>
+
+      <!-- 카테고리별 진행률 -->
+      <div class="budget-section">
+        <div class="bsec-title">카테고리별 사용<span class="th">ตามหมวด</span></div>
+        <div id="budgetCategoryList"></div>
+      </div>
+
+      <!-- 도넛 차트 -->
+      <div class="budget-section">
+        <div class="bsec-title">이번 달 지출 분포<span class="th">การกระจายรายจ่าย</span></div>
+        <div class="chart-wrap"><canvas id="chartDoughnut"></canvas></div>
+      </div>
+
+      <!-- 6개월 추이 -->
+      <div class="budget-section">
+        <div class="bsec-title">최근 6개월 추이<span class="th">6 เดือนล่าสุด</span></div>
+        <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
+      </div>
+    </main>
 
     <!-- 우측: 고정지출 -->
     <aside class="side-col" id="sideFixed" data-mtab-pane="fixed">
@@ -544,6 +652,28 @@
   </div>
 </div>
 
+<!-- 예산 편집 모달 -->
+<div class="modal-overlay" id="budgetModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" id="budgetModalTitle">예산 편집<span class="th">แก้ไขงบ</span></div>
+      <button class="modal-close" onclick="document.getElementById('budgetModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5;">
+        카테고리별 월 예산을 원 단위로 입력하세요. 빈칸은 0으로 저장됩니다.
+        <br><span style="opacity:0.85;">กรอกงบประมาณรายเดือนแต่ละหมวด (หน่วย: วอน). ช่องว่าง = 0</span>
+      </div>
+      <div id="budgetEditList"></div>
+      <div class="form-actions" style="margin-top:14px;">
+        <button class="btn btn-ghost btn-sm" onclick="copyPrevMonthBudget()" style="margin-right:auto;">⟲ 이전 달 예산 복사<span class="th">คัดลอกจากเดือนก่อน</span></button>
+        <button class="btn btn-ghost" onclick="document.getElementById('budgetModal').classList.remove('open')">취소 / ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveBudget()">저장 / บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 일별 상세 모달 -->
 <div class="modal-overlay" id="dayDetailModal">
   <div class="modal" style="max-width:460px;">
@@ -598,7 +728,15 @@ const MEMBER_COLORS = ['#60a5fa','#f472b6','#34d399','#fbbf24','#a78bfa','#fb923
 let editingFixedId = null;
 let eventsCache = [];
 let editingEventId = null;
-let currentMainTab = 'ledger'; // 'events' | 'ledger' | 'fixed'
+let currentMainTab = 'ledger'; // 'events' | 'ledger' | 'fixed' | 'budget'
+
+// 예산 (budgets/{YYYY-MM} = { category: amount })
+let budgetCache = {};      // 이번 달 예산 맵
+let budgetUnsub = null;
+let trendTxCache = [];     // 최근 6개월 거래(추이 차트용)
+let trendUnsub = null;
+let _chartDoughnut = null; // Chart.js 인스턴스 보관(파괴 후 재생성)
+let _chartTrend = null;
 
 // ── 카테고리 (한/태 매핑) ──
 // 키는 ko (DB 저장용), 표시는 둘 다
@@ -853,11 +991,45 @@ function subscribeMonth() {
     renderTxList();
     renderCalendar();
     renderFixedPendingBanner();
+    renderBudgetPage(); // 거래가 바뀌면 예산 진행률도 갱신
     if (currentDayDetail) renderDayDetail(); // 모달 열려있으면 갱신
   }, (err) => {
     console.error('snapshot error', err);
     showNotif('데이터 로딩 실패 / โหลดข้อมูลไม่สำเร็จ: ' + err.message, true);
   });
+  subscribeBudget();
+  subscribeTrend();
+}
+
+// 이번 달 예산 문서 구독
+function subscribeBudget() {
+  if (budgetUnsub) { budgetUnsub(); budgetUnsub = null; }
+  const mk = monthKey(currentMonth);
+  budgetUnsub = onSnapshot(doc(db, 'budgets', mk), (snap) => {
+    const data = snap.exists() ? (snap.data() || {}) : {};
+    // amounts 필드만 추출 (메타 필드 제외)
+    budgetCache = {};
+    Object.keys(data).forEach(k => {
+      if (typeof data[k] === 'number') budgetCache[k] = data[k];
+    });
+    renderBudgetPage();
+  }, (err) => console.error('budget snap error', err));
+}
+
+// 최근 6개월 거래 구독 (추이 차트용)
+function subscribeTrend() {
+  if (trendUnsub) { trendUnsub(); trendUnsub = null; }
+  const months = [];
+  const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  for (let i = 0; i < 6; i++) {
+    months.push(monthKey(d));
+    d.setMonth(d.getMonth() - 1);
+  }
+  const q = query(collection(db, 'transactions'), where('monthKey', 'in', months));
+  trendUnsub = onSnapshot(q, (snap) => {
+    trendTxCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTrendChart();
+  }, (err) => console.error('trend snap error', err));
 }
 
 function renderSummary() {
@@ -1448,11 +1620,20 @@ window.applyFixedToCurrentMonth = async function() {
   showNotif(added + '건 추가됨 / เพิ่ม ' + added + ' รายการ' + (failed ? ' (' + failed + ' 실패)' : ''));
 };
 
-// ── 메인 탭 전환 (모바일) ──
+// ── 메인 탭 전환 (모바일 + PC budget 토글) ──
 window.setMainTab = function(tab) {
   currentMainTab = tab;
   document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-mtab') === tab));
   document.querySelectorAll('[data-mtab-pane]').forEach(p => p.classList.toggle('active-tab', p.getAttribute('data-mtab-pane') === tab));
+  // PC에서 budget 탭 선택 시 풀스크린 확장, 그 외 탭이면 확장 모드 해제
+  if (window.matchMedia('(min-width: 1100px)').matches) {
+    const layout = document.querySelector('.layout');
+    if (layout) {
+      layout.classList.remove('events-expanded', 'fixed-expanded', 'budget-expanded');
+      if (tab === 'budget') layout.classList.add('budget-expanded');
+    }
+  }
+  if (tab === 'budget') renderBudgetPage();
 };
 
 // ── PC 확장 모드 (사이드 풀스크린) ──
@@ -1460,11 +1641,281 @@ window.toggleExpand = function(which, forceState) {
   const layout = document.querySelector('.layout');
   if (!layout) return;
   const cls = which + '-expanded';
-  const otherCls = (which === 'fixed' ? 'events' : 'fixed') + '-expanded';
+  const allExpanded = ['events-expanded', 'fixed-expanded', 'budget-expanded'];
   const willExpand = (typeof forceState === 'boolean') ? forceState : !layout.classList.contains(cls);
-  layout.classList.remove(otherCls); // 동시에 두 개 켜지지 않게
+  allExpanded.forEach(c => { if (c !== cls) layout.classList.remove(c); });
   layout.classList.toggle(cls, willExpand);
 };
+
+// ── 예산 페이지 렌더 ──
+function renderBudgetPage() {
+  // 월 라벨
+  const lab = document.getElementById('budgetMonthLabel');
+  if (lab) {
+    const y = currentMonth.getFullYear();
+    const m = currentMonth.getMonth();
+    lab.innerHTML = y + '년 ' + (m+1) + '월 <span class="th">' + MONTHS_TH[m] + ' ' + y + '</span>';
+  }
+
+  // 이번 달 지출 합계 (카테고리별)
+  const spentByCat = {};
+  let totalSpent = 0;
+  txCache.forEach(t => {
+    if (t.type !== 'expense') return;
+    const amt = Number(t.amount) || 0;
+    const cat = t.category || '기타';
+    spentByCat[cat] = (spentByCat[cat] || 0) + amt;
+    totalSpent += amt;
+  });
+
+  // 총괄
+  const totalBudget = Object.values(budgetCache).reduce((s, v) => s + (Number(v)||0), 0);
+  const totalRemain = totalBudget - totalSpent;
+  const tb = document.getElementById('boTotalBudget');
+  const ts = document.getElementById('boTotalSpent');
+  const tr = document.getElementById('boTotalRemain');
+  if (tb) tb.textContent = fmtMoney(totalBudget);
+  if (ts) ts.textContent = fmtMoney(totalSpent);
+  if (tr) {
+    tr.textContent = fmtMoney(totalRemain);
+    tr.style.color = totalRemain < 0 ? 'var(--expense)' : 'var(--accent)';
+  }
+  const barFill = document.getElementById('boBarFill');
+  if (barFill) {
+    const pct = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
+    barFill.style.width = pct + '%';
+    barFill.classList.remove('warn','over');
+    if (totalSpent > totalBudget && totalBudget > 0) barFill.classList.add('over');
+    else if (pct >= 80) barFill.classList.add('warn');
+  }
+
+  // 카테고리별 진행률
+  const listEl = document.getElementById('budgetCategoryList');
+  if (listEl) {
+    if (!totalBudget && !totalSpent) {
+      listEl.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--text-dim);font-size:12px;line-height:1.6;">아직 예산이 설정되지 않았습니다<br><span style="opacity:0.85;">ยังไม่ได้ตั้งงบประมาณ</span><br><br>상단의 <b>✎ 예산 편집</b> 버튼을 눌러 시작하세요</div>';
+    } else {
+      // 예산 또는 사용액이 있는 모든 카테고리 표시
+      const allCats = new Set(Object.keys(budgetCache).concat(Object.keys(spentByCat)));
+      // 정의된 순서를 유지
+      const ordered = CATEGORIES.expense.map(c => c.ko).filter(k => allCats.has(k));
+      // 정의에 없는 것은 끝에
+      Array.from(allCats).forEach(k => { if (!ordered.includes(k)) ordered.push(k); });
+      let html = '';
+      ordered.forEach(cat => {
+        const budget = Number(budgetCache[cat]) || 0;
+        const spent = Number(spentByCat[cat]) || 0;
+        const pct = budget > 0 ? (spent / budget) * 100 : 0;
+        const widthPct = Math.min(100, pct);
+        let cls = '';
+        if (budget > 0 && spent > budget) cls = 'over';
+        else if (pct >= 80) cls = 'warn';
+        const catLabel = getCategoryLabel(cat);
+        const overTxt = (budget > 0 && spent > budget) ? '<span class="over">+' + fmtMoney(spent - budget) + '</span>' : '';
+        html += '<div class="bcat-row">'
+          + '<div class="bcat-head">'
+            + '<div class="bcat-name">' + esc(catLabel) + '</div>'
+            + '<div class="bcat-nums"><span class="used">' + fmtMoney(spent) + '</span> / ' + fmtMoney(budget) + ' ' + overTxt + '</div>'
+          + '</div>'
+          + '<div class="bcat-bar"><div class="bcat-bar-fill ' + cls + '" style="width:' + widthPct + '%;"></div></div>'
+          + '</div>';
+      });
+      listEl.innerHTML = html || '<div style="text-align:center;padding:18px 0;color:var(--text-dim);font-size:12px;">표시할 카테고리가 없습니다</div>';
+    }
+  }
+
+  // 차트도 같이 갱신
+  renderDoughnutChart(spentByCat);
+}
+
+// ── 예산 편집 모달 ──
+window.openBudgetEditor = function() {
+  const listEl = document.getElementById('budgetEditList');
+  if (!listEl) return;
+  let html = '';
+  CATEGORIES.expense.forEach(c => {
+    const val = Number(budgetCache[c.ko]) || 0;
+    html += '<div class="budget-edit-row" data-cat="' + esc(c.ko) + '">'
+      + '<div class="nm">' + esc(c.ko) + '<span class="th">' + esc(c.th) + '</span></div>'
+      + '<input type="number" min="0" step="1000" placeholder="0" value="' + (val || '') + '">'
+      + '</div>';
+  });
+  listEl.innerHTML = html;
+  const y = currentMonth.getFullYear();
+  const m = currentMonth.getMonth();
+  document.getElementById('budgetModalTitle').innerHTML =
+    '예산 편집 — ' + y + '년 ' + (m+1) + '월<span class="th">' + MONTHS_TH[m] + ' ' + y + '</span>';
+  document.getElementById('budgetModal').classList.add('open');
+};
+
+window.saveBudget = async function() {
+  const mk = monthKey(currentMonth);
+  const data = {};
+  document.querySelectorAll('#budgetEditList .budget-edit-row').forEach(row => {
+    const cat = row.getAttribute('data-cat');
+    const inp = row.querySelector('input');
+    const val = Number(inp.value) || 0;
+    data[cat] = val;
+  });
+  data.updatedAt = serverTimestamp();
+  data.updatedBy = currentUser ? currentUser.email : '';
+  try {
+    await setDoc(doc(db, 'budgets', mk), data, { merge: false });
+    document.getElementById('budgetModal').classList.remove('open');
+    showNotif('예산 저장됨 / บันทึกแล้ว');
+  } catch(e) {
+    showNotif('저장 실패: ' + e.message, true);
+  }
+};
+
+window.copyPrevMonthBudget = async function() {
+  const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+  const prevMk = monthKey(d);
+  try {
+    const snap = await getDoc(doc(db, 'budgets', prevMk));
+    if (!snap.exists()) {
+      showNotif('이전 달 예산이 없습니다 / ไม่มีงบประมาณเดือนก่อน', true);
+      return;
+    }
+    const prev = snap.data() || {};
+    document.querySelectorAll('#budgetEditList .budget-edit-row').forEach(row => {
+      const cat = row.getAttribute('data-cat');
+      const inp = row.querySelector('input');
+      const val = Number(prev[cat]) || 0;
+      inp.value = val || '';
+    });
+    showNotif('이전 달 예산 불러옴 / โหลดจากเดือนก่อนแล้ว');
+  } catch(e) {
+    showNotif('불러오기 실패: ' + e.message, true);
+  }
+};
+
+// ── 차트 색상 팔레트 ──
+const CHART_COLORS = ['#f59e0b','#60a5fa','#f472b6','#34d399','#a78bfa','#fb923c','#22d3ee','#fb7185','#facc15','#a3e635','#94a3b8'];
+
+function renderDoughnutChart(spentByCat) {
+  const canvas = document.getElementById('chartDoughnut');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const entries = Object.entries(spentByCat || {}).filter(([k,v]) => Number(v) > 0);
+  entries.sort((a,b) => b[1] - a[1]);
+  const labels = entries.map(([k]) => {
+    const c = CATEGORIES.expense.find(x => x.ko === k);
+    return c ? (c.ko + ' / ' + c.th) : k;
+  });
+  const data = entries.map(([,v]) => v);
+  if (_chartDoughnut) { _chartDoughnut.destroy(); _chartDoughnut = null; }
+  if (!data.length) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  _chartDoughnut = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: data.map((_,i) => CHART_COLORS[i % CHART_COLORS.length]),
+        borderColor: '#1a1a1f',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#e5e7eb', font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.label + ': ' + fmtMoney(ctx.parsed)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderTrendChart() {
+  const canvas = document.getElementById('chartTrend');
+  if (!canvas || typeof Chart === 'undefined') return;
+  // 최근 6개월(현재 달 포함) 키 배열, 오래된 → 최신 순서
+  const months = [];
+  const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  for (let i = 0; i < 6; i++) {
+    months.push({ key: monthKey(d), y: d.getFullYear(), m: d.getMonth() });
+    d.setMonth(d.getMonth() - 1);
+  }
+  months.reverse(); // 오래된 → 최신
+
+  const incomeByMonth = {};
+  const expenseByMonth = {};
+  months.forEach(mo => { incomeByMonth[mo.key] = 0; expenseByMonth[mo.key] = 0; });
+  trendTxCache.forEach(t => {
+    const mk = t.monthKey;
+    if (!(mk in incomeByMonth)) return;
+    const amt = Number(t.amount) || 0;
+    if (t.type === 'income') incomeByMonth[mk] += amt;
+    else expenseByMonth[mk] += amt;
+  });
+
+  const labels = months.map(mo => (mo.m+1) + '월 / ' + MONTHS_TH[mo.m]);
+  const incomeData = months.map(mo => incomeByMonth[mo.key]);
+  const expenseData = months.map(mo => expenseByMonth[mo.key]);
+
+  if (_chartTrend) { _chartTrend.destroy(); _chartTrend = null; }
+  _chartTrend = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '수입 / รายรับ',
+          data: incomeData,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.12)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#22c55e'
+        },
+        {
+          label: '지출 / รายจ่าย',
+          data: expenseData,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.12)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#ef4444'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#e5e7eb', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.dataset.label + ': ' + fmtMoney(ctx.parsed.y)
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#2e2e36' } },
+        y: {
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 10 },
+            callback: (v) => '₩' + (v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v)
+          },
+          grid: { color: '#2e2e36' }
+        }
+      }
+    }
+  });
+}
 
 // ── 특이사항(가족 일정) ──
 let eventsUnsub = null;

@@ -1,7 +1,7 @@
 {
-  "name": "Sarah Family 가계부",
-  "short_name": "가계부",
-  "description": "가족 전용 가계부 — 수입/지출/예산을 한 곳에서",
+  "name": "OurNest — 우리가족 가계부",
+  "short_name": "OurNest",
+  "description": "OurNest — 가족 전용 가계부. 수입·지출·예산을 한 곳에서",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",
