@@ -1,7 +1,7 @@
 // Sarah Family 가계부 — Service Worker
 // 앱 셸(HTML/manifest/icons)만 캐시. Firebase CDN/Firestore는 자체 캐시·재시도.
 
-const CACHE_VERSION = 'v11-2026-05-16-notch-fix2';
+const CACHE_VERSION = 'v12-2026-05-16-contrast';
 const CACHE_NAME = `sarah-family-${CACHE_VERSION}`;
 
 const APP_SHELL = [
