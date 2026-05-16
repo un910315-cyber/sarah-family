@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.mymemory.translated.net https://cdn.jsdelivr.net wss://*.firebaseio.com; frame-src https://*.firebaseapp.com https://accounts.google.com; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none';">
 <title>OurNest — 우리가족 가계부 / สมุดบัญชี</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F4F8FE">
@@ -901,6 +902,39 @@ const fmtMoney = (n) => '₩' + (Number(n)||0).toLocaleString('ko-KR');
 const monthKey = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 const todayStr = () => new Date().toISOString().split('T')[0];
 
+// ── 입력 검증 헬퍼 ──
+const MAX_AMOUNT = 999999999;   // 9억 9천만원 — 합리적 상한
+const MAX_MEMO_LEN = 1000;       // memo / description
+const MAX_NAME_LEN = 100;        // title / 카테고리 / fixed name
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+function isValidDateStr(s) {
+  if (!s || !DATE_RE.test(s)) return false;
+  const d = new Date(s + 'T00:00:00');
+  if (isNaN(d.getTime())) return false;
+  // ISO round-trip 비교로 2026-02-30 같은 잘못된 날짜 거름
+  return d.toISOString().slice(0,10) === s;
+}
+function safeAmount(v) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n) || isNaN(n)) return null;
+  if (n <= 0 || n > MAX_AMOUNT) return null;
+  return n;
+}
+function clipText(s, max) {
+  return String(s || '').slice(0, max);
+}
+// 외부에서 받은 URL이 안전한지 (http/https만 허용)
+function safeHttpUrl(u) {
+  if (!u || typeof u !== 'string') return '';
+  try {
+    const p = new URL(u);
+    return (p.protocol === 'https:' || p.protocol === 'http:') ? u : '';
+  } catch { return ''; }
+}
+// 사용자에게는 일반 메시지, 콘솔에는 상세 — 정보 누출 방지
+function userErrMsg(prefix) { return (prefix || '오류가 발생했습니다') + ' / เกิดข้อผิดพลาด'; }
+
 // ── 자동 번역 (MyMemory 무료 API, 키 불필요, 일 5000자 한도) ──
 // 한국어/태국어 자동 감지 후 반대 언어로 번역. 영문/숫자만이면 번역 안 함.
 function detectLang(text) {
@@ -1028,21 +1062,37 @@ window.authLogin = async function() {
         return;
       }
     }
-    document.getElementById('loginError').textContent = '로그인 실패 / เข้าสู่ระบบไม่สำเร็จ: ' + e.message;
+    document.getElementById('loginError').textContent = '로그인 실패 / เข้าสู่ระบบไม่สำเร็จ';
     document.getElementById('loginError').classList.add('show');
   }
 };
 
 // 페이지 로드 시 redirect 결과 자동 처리 (signInWithRedirect 사용된 경우)
 getRedirectResult(auth).catch(e => { console.warn('redirect result error', e); });
+function teardownAllSubscriptions() {
+  // 모든 onSnapshot unsubscribe — 로그아웃 시 메모리·중복 구독 방지
+  try { if (txUnsub) { txUnsub(); } } catch(e){}
+  try { if (budgetUnsub) { budgetUnsub(); } } catch(e){}
+  try { if (trendUnsub) { trendUnsub(); } } catch(e){}
+  try { if (fixedUnsub) { fixedUnsub(); } } catch(e){}
+  try { if (eventsUnsub) { eventsUnsub(); } } catch(e){}
+  try { if (familyMembersUnsub) { familyMembersUnsub(); } } catch(e){}
+  try { if (categoriesUnsub) { categoriesUnsub(); } } catch(e){}
+  txUnsub = budgetUnsub = trendUnsub = fixedUnsub = eventsUnsub = familyMembersUnsub = categoriesUnsub = null;
+  // 캐시도 정리해서 다른 계정 로그인 시 잔존 데이터 안 보이게
+  txCache = []; fixedExpensesCache = []; eventsCache = []; familyMembersMap = {};
+  categoriesCache = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+}
+
 window.authLogout = async function() {
   if (!confirm('로그아웃하시겠습니까?\nออกจากระบบใช่หรือไม่?')) return;
-  if (txUnsub) { txUnsub(); txUnsub = null; }
+  teardownAllSubscriptions();
   await signOut(auth);
 };
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
+    teardownAllSubscriptions();
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
@@ -1063,7 +1113,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
     const data = snap.data();
-    currentUser = { email: user.email, name: data.name || user.displayName || user.email, role: data.role || 'member', photo: user.photoURL || '' };
+    currentUser = { email: user.email, name: data.name || user.displayName || user.email, role: data.role || 'member', photo: safeHttpUrl(user.photoURL) };
     renderHeader();
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'none';
@@ -1076,10 +1126,10 @@ onAuthStateChanged(auth, async (user) => {
     subscribeCategories();
     setMainTab(currentMainTab);
   } catch(e) {
-    console.error(e);
+    console.error('auth state change error', e);
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('loginError').textContent = '오류 / ข้อผิดพลาด: ' + e.message;
+    document.getElementById('loginError').textContent = userErrMsg('로그인 처리 중 오류');
     document.getElementById('loginError').classList.add('show');
   }
 });
@@ -1523,16 +1573,17 @@ window.editTx = function(id) {
 
 window.saveTx = async function() {
   const date = document.getElementById('txDate').value;
-  const amount = parseInt(document.getElementById('txAmount').value, 10);
+  const amount = safeAmount(document.getElementById('txAmount').value);
   const category = document.getElementById('txCategory').value;
-  const memo = document.getElementById('txMemo').value.trim();
-  if (!date) { showNotif('날짜를 입력해주세요 / กรุณาเลือกวันที่', true); return; }
-  if (!amount || amount <= 0) { showNotif('금액을 입력해주세요 / กรุณาใส่จำนวนเงิน', true); return; }
+  const memo = clipText(document.getElementById('txMemo').value.trim(), MAX_MEMO_LEN);
+  if (!isValidDateStr(date)) { showNotif('날짜를 올바르게 입력해주세요 / กรุณาเลือกวันที่ให้ถูกต้อง', true); return; }
+  if (amount == null) { showNotif('금액은 1원~9억9천만원 범위로 입력해주세요 / จำนวนเงินไม่ถูกต้อง', true); return; }
   if (!category) { showNotif('카테고리를 선택해주세요 / กรุณาเลือกหมวดหมู่', true); return; }
+  if (currentTxType !== 'income' && currentTxType !== 'expense') { showNotif('잘못된 거래 유형 / ประเภทรายการไม่ถูกต้อง', true); return; }
   const data = {
     type: currentTxType,
     amount: amount,
-    category: category,
+    category: clipText(category, MAX_NAME_LEN),
     date: date,
     monthKey: date.slice(0, 7),
     memo: memo,
@@ -1716,20 +1767,20 @@ window.editFixed = function(id) {
 };
 
 window.saveFixed = async function() {
-  const name = document.getElementById('fxName').value.trim();
-  const amount = parseInt(document.getElementById('fxAmount').value, 10);
+  const name = clipText(document.getElementById('fxName').value.trim(), MAX_NAME_LEN);
+  const amount = safeAmount(document.getElementById('fxAmount').value);
   const category = document.getElementById('fxCategory').value;
   const dayOfMonth = parseInt(document.getElementById('fxDay').value, 10);
-  const memo = document.getElementById('fxMemo').value.trim();
+  const memo = clipText(document.getElementById('fxMemo').value.trim(), MAX_MEMO_LEN);
   if (!name) { showNotif('이름을 입력해주세요 / กรุณาใส่ชื่อ', true); return; }
-  if (!amount || amount <= 0) { showNotif('금액을 입력해주세요 / กรุณาใส่จำนวนเงิน', true); return; }
-  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) { showNotif('날짜가 잘못되었습니다', true); return; }
+  if (amount == null) { showNotif('금액은 1원~9억9천만원 범위로 입력해주세요 / จำนวนเงินไม่ถูกต้อง', true); return; }
+  if (!Number.isFinite(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) { showNotif('날짜가 잘못되었습니다 / วันที่ไม่ถูกต้อง', true); return; }
   const data = {
     name: name,
     nameKo: '',
     nameTh: '',
     amount: amount,
-    category: category,
+    category: clipText(category, MAX_NAME_LEN),
     dayOfMonth: dayOfMonth,
     memo: memo,
     memoKo: '',
@@ -2269,10 +2320,11 @@ window.editEvent = function(id) {
 window.saveEvent = async function() {
   const date = document.getElementById('evDate').value;
   const endDate = document.getElementById('evEndDate').value;
-  const title = document.getElementById('evTitle').value.trim();
-  const description = document.getElementById('evDesc').value.trim();
-  if (!date) { showNotif('날짜를 입력해주세요 / กรุณาเลือกวันที่', true); return; }
+  const title = clipText(document.getElementById('evTitle').value.trim(), MAX_NAME_LEN);
+  const description = clipText(document.getElementById('evDesc').value.trim(), MAX_MEMO_LEN);
+  if (!isValidDateStr(date)) { showNotif('날짜를 올바르게 입력해주세요 / กรุณาเลือกวันที่ให้ถูกต้อง', true); return; }
   if (!title) { showNotif('제목을 입력해주세요 / กรุณาใส่หัวข้อ', true); return; }
+  if (endDate && !isValidDateStr(endDate)) { showNotif('종료일이 올바르지 않습니다 / วันสิ้นสุดไม่ถูกต้อง', true); return; }
   if (endDate && endDate < date) { showNotif('종료일이 시작일보다 빠릅니다 / วันสิ้นสุดอยู่ก่อนวันเริ่ม', true); return; }
   const data = {
     date: date,
