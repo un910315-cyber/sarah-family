@@ -316,6 +316,18 @@
   .chart-wrap { position: relative; height: 280px; }
   @media (max-width: 500px) { .chart-wrap { height: 220px; } }
 
+  /* 카티 마스코트 유틸 */
+  .karty-inline { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; vertical-align: middle; }
+  .karty-title { width: 28px; height: 28px; object-fit: contain; vertical-align: middle; margin-right: 4px; }
+  .karty-corner { position: absolute; width: 40px; height: 40px; object-fit: contain; pointer-events: none; opacity: 0.95; top: 4px; right: 6px; z-index: 2; transform: rotate(-6deg); }
+  .karty-corner.left { right: auto; left: 6px; transform: rotate(6deg); }
+  .karty-mood { position: absolute; top: 8px; right: 10px; width: 36px; height: 36px; object-fit: contain; pointer-events: none; opacity: 0.95; transition: opacity .2s; }
+  .sum-card.balance { position: relative; }
+  .sum-card.balance .val { padding-right: 36px; }
+  .budget-section { position: relative; }
+  .cal-wrap { position: relative; }
+  .empty .karty-mini { width: 84px; height: 84px; object-fit: contain; display: block; margin: 0 auto 8px; }
+
   /* 예산 편집 모달 — 카테고리 줄 */
   .budget-edit-row { display: grid; grid-template-columns: 1fr 160px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border); }
   .budget-edit-row:last-child { border-bottom: none; }
@@ -367,7 +379,7 @@
     <aside class="side-col" id="sideEvents" data-mtab-pane="events">
       <div>
         <button class="side-back-btn" id="eventsBackBtn" onclick="toggleExpand('events',false)">← 가계부로 돌아가기 / กลับ</button>
-        <div class="side-title">📌 특이사항<span class="th">กิจกรรมพิเศษ</span><button class="side-expand-btn" onclick="toggleExpand('events')" title="크게 보기">⤢</button></div>
+        <div class="side-title"><img src="icons/karty/cheer.png" class="karty-inline" alt="">특이사항<span class="th">กิจกรรมพิเศษ</span><button class="side-expand-btn" onclick="toggleExpand('events')" title="크게 보기">⤢</button></div>
         <div class="side-sub">가족 행사·여행·캠핑 등<br><span style="opacity:0.85;">งานครอบครัว · ทริป · แคมป์</span></div>
         <button class="btn btn-primary btn-sm" onclick="openEventModal()" style="width:100%;margin-bottom:10px;">+ 일정 추가<span class="th">เพิ่มกิจกรรม</span></button>
         <div id="eventList"></div>
@@ -394,6 +406,7 @@
         <div class="val" id="sumExpense">₩0</div>
       </div>
       <div class="sum-card balance">
+        <img id="balanceMood" class="karty-mood" src="icons/karty/cheer.png" alt="">
         <div class="label">잔액<span class="th">ยอดคงเหลือ</span></div>
         <div class="val" id="sumBalance">₩0</div>
       </div>
@@ -427,6 +440,7 @@
     <!-- 달력 -->
     <div id="calView" style="display:none;">
       <div class="cal-wrap">
+        <img src="icons/karty/cheer.png" class="karty-corner" alt="" style="width:34px;height:34px;top:6px;right:8px;">
         <div class="cal-head-row">
           <div class="cal-head-cell sun">일<span class="th">อา.</span></div>
           <div class="cal-head-cell">월<span class="th">จ.</span></div>
@@ -445,7 +459,7 @@
     <main data-mtab-pane="budget" class="budget-page">
       <div class="budget-header">
         <button class="budget-back-btn" onclick="setMainTab('ledger')" title="가계부로 돌아가기 / กลับ">←</button>
-        <div class="budget-title">💰 예산<span class="th">งบประมาณ</span></div>
+        <div class="budget-title"><img src="icons/karty/write.png" class="karty-title" alt="">예산<span class="th">งบประมาณ</span></div>
         <button class="btn btn-primary btn-sm" onclick="openBudgetEditor()">✎ 예산 편집<span class="th">แก้ไข</span></button>
       </div>
       <div class="month-nav" style="margin-bottom:14px;">
@@ -479,12 +493,14 @@
 
       <!-- 도넛 차트 -->
       <div class="budget-section">
+        <img src="icons/karty/cheer.png" class="karty-corner" alt="">
         <div class="bsec-title">이번 달 지출 분포<span class="th">การกระจายรายจ่าย</span></div>
         <div class="chart-wrap"><canvas id="chartDoughnut"></canvas></div>
       </div>
 
       <!-- 6개월 추이 -->
       <div class="budget-section">
+        <img src="icons/karty/sleep.png" class="karty-corner" alt="">
         <div class="bsec-title">최근 6개월 추이<span class="th">6 เดือนล่าสุด</span></div>
         <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
       </div>
@@ -494,7 +510,7 @@
     <aside class="side-col" id="sideFixed" data-mtab-pane="fixed">
       <div>
         <button class="side-back-btn" id="fixedBackBtn" onclick="toggleExpand('fixed',false)">← 가계부로 돌아가기 / กลับ</button>
-        <div class="side-title">🔁 고정지출<span class="th">รายจ่ายประจำ</span><button class="side-expand-btn" onclick="toggleExpand('fixed')" title="크게 보기">⤢</button></div>
+        <div class="side-title"><img src="icons/karty/write.png" class="karty-inline" alt="">고정지출<span class="th">รายจ่ายประจำ</span><button class="side-expand-btn" onclick="toggleExpand('fixed')" title="크게 보기">⤢</button></div>
         <div class="side-sub">매달 반복되는 지출<br><span style="opacity:0.85;">รายจ่ายที่เกิดทุกเดือน</span></div>
         <button class="btn btn-primary btn-sm" onclick="openFixedModal()" style="width:100%;margin-bottom:10px;">+ 항목 추가<span class="th">เพิ่มรายการ</span></button>
         <div id="fixedSideList"></div>
@@ -1049,7 +1065,13 @@ function renderSummary() {
   });
   document.getElementById('sumIncome').textContent = fmtMoney(income);
   document.getElementById('sumExpense').textContent = fmtMoney(expense);
-  document.getElementById('sumBalance').textContent = fmtMoney(income - expense);
+  const bal = income - expense;
+  document.getElementById('sumBalance').textContent = fmtMoney(bal);
+  const moodEl = document.getElementById('balanceMood');
+  if (moodEl) {
+    const mood = bal < 0 ? 'sad' : (bal === 0 && income === 0 && expense === 0) ? 'sleep' : 'cheer';
+    moodEl.src = 'icons/karty/' + mood + '.png';
+  }
 }
 
 function renderTxList() {
@@ -1533,7 +1555,7 @@ function renderFixedSide() {
   list.forEach(f => { if (f.active !== false) total += Number(f.amount)||0; });
   totEl.textContent = fmtMoney(total);
   if (!list.length) {
-    el.innerHTML = '<div style="text-align:center;padding:14px 6px;color:var(--text-dim);font-size:11px;line-height:1.6;">등록된 고정지출이 없습니다<br><span style="opacity:0.85;">ยังไม่มีรายจ่ายประจำ</span></div>';
+    el.innerHTML = '<div style="text-align:center;padding:14px 6px;color:var(--text-dim);font-size:11px;line-height:1.6;"><img src="icons/karty/sleep.png" alt="" style="width:56px;height:56px;object-fit:contain;display:block;margin:0 auto 6px;opacity:0.9;">등록된 고정지출이 없습니다<br><span style="opacity:0.85;">ยังไม่มีรายจ่ายประจำ</span></div>';
     return;
   }
   el.innerHTML = list.map(f =>
@@ -1550,7 +1572,7 @@ function renderFixedList() {
   if (!el) return;
   renderFixedSide();
   if (!fixedExpensesCache.length) {
-    el.innerHTML = '<div style="text-align:center;padding:24px 10px;color:var(--text-dim);font-size:12px;">등록된 고정지출이 없습니다<br><span style="opacity:0.85;">ยังไม่มีรายจ่ายประจำ</span></div>';
+    el.innerHTML = '<div class="empty"><img src="icons/karty/sleep.png" class="karty-mini" alt="">등록된 고정지출이 없습니다<span class="th">ยังไม่มีรายจ่ายประจำ</span></div>';
     return;
   }
   el.innerHTML = fixedExpensesCache.map(f => {
@@ -1952,7 +1974,7 @@ function renderEventList() {
   const el = document.getElementById('eventList');
   if (!el) return;
   if (!eventsCache.length) {
-    el.innerHTML = '<div style="text-align:center;padding:14px 6px;color:var(--text-dim);font-size:11px;line-height:1.6;">등록된 일정이 없습니다<br><span style="opacity:0.85;">ยังไม่มีกิจกรรม</span></div>';
+    el.innerHTML = '<div style="text-align:center;padding:14px 6px;color:var(--text-dim);font-size:11px;line-height:1.6;"><img src="icons/karty/cheer.png" alt="" style="width:56px;height:56px;object-fit:contain;display:block;margin:0 auto 6px;opacity:0.9;">등록된 일정이 없습니다<br><span style="opacity:0.85;">ยังไม่มีกิจกรรม</span></div>';
     return;
   }
   // 다가오는 일정 먼저, 그 다음 지난 일정
