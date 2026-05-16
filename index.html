@@ -321,9 +321,9 @@
   .karty-title { width: 92px; height: 92px; object-fit: contain; vertical-align: middle; margin-right: 10px; }
   .karty-corner { position: absolute; width: 110px; height: 110px; object-fit: contain; pointer-events: none; opacity: 1; top: 4px; right: 6px; z-index: 2; transform: rotate(-6deg); }
   .karty-corner.left { right: auto; left: 6px; transform: rotate(6deg); }
-  .karty-mood { position: absolute; top: 6px; right: 8px; width: 92px; height: 92px; object-fit: contain; pointer-events: none; opacity: 1; transition: opacity .2s; }
-  .sum-card.balance { position: relative; min-height: 112px; }
-  .sum-card.balance .val { padding-right: 96px; }
+  .karty-mood { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); width: 120px; height: 120px; object-fit: contain; pointer-events: none; opacity: 1; transition: opacity .2s; }
+  .sum-card.balance { position: relative; min-height: 134px; }
+  .sum-card.balance .val { padding-right: 124px; }
   .budget-section { position: relative; }
   .cal-wrap { position: relative; }
   .cal-wrap .karty-corner { width: 76px; height: 76px; top: 4px; right: 6px; }
@@ -331,9 +331,9 @@
   @media (max-width: 500px) {
     .karty-corner { width: 84px; height: 84px; }
     .cal-wrap .karty-corner { width: 60px; height: 60px; }
-    .karty-mood { width: 74px; height: 74px; }
-    .sum-card.balance { min-height: 92px; }
-    .sum-card.balance .val { padding-right: 78px; }
+    .karty-mood { width: 96px; height: 96px; }
+    .sum-card.balance { min-height: 108px; }
+    .sum-card.balance .val { padding-right: 100px; }
   }
 
   /* 예산 편집 모달 — 카테고리 줄 */
