@@ -1377,12 +1377,37 @@ function renderCatEditor() {
   const el = document.getElementById('catEditorList');
   el.innerHTML = list.map((c, i) =>
     '<div class="cat-row">'
-    + '<input type="text" placeholder="한글 이름" value="'+esc(c.ko)+'" data-cat-i="'+i+'" data-cat-f="ko">'
-    + '<input type="text" placeholder="태국어 ชื่อภาษาไทย" value="'+esc(c.th)+'" data-cat-i="'+i+'" data-cat-f="th">'
+    + '<input type="text" placeholder="한글 이름" value="'+esc(c.ko)+'" data-cat-i="'+i+'" data-cat-f="ko" onblur="autoTranslateCatRow('+i+')">'
+    + '<input type="text" placeholder="태국어 (자동 번역됨)" value="'+esc(c.th)+'" data-cat-i="'+i+'" data-cat-f="th">'
     + '<button class="cat-del" onclick="removeCatRow('+i+')" title="삭제 / ลบ">✕</button>'
     + '</div>'
   ).join('');
 }
+
+window.autoTranslateCatRow = async function(i) {
+  syncCatEditorInputs();
+  const row = catEditorDraft[catEditorType][i];
+  if (!row) return;
+  const ko = (row.ko || '').trim();
+  const th = (row.th || '').trim();
+  // 한글 비어있거나, 태국어가 이미 채워져있으면 건너뜀
+  if (!ko || th) return;
+  // 같은 한글이 캐시에 이미 있으면 그 번역값 재활용 (API 호출 절약)
+  const all = categoriesCache.expense.concat(categoriesCache.income);
+  const existing = all.find(c => c.ko === ko && c.th);
+  let translated = existing ? existing.th : '';
+  if (!translated) {
+    const thInput = document.querySelector('#catEditorList input[data-cat-i="'+i+'"][data-cat-f="th"]');
+    if (thInput) { thInput.placeholder = '번역 중... / กำลังแปล...'; }
+    translated = await translateText(ko, 'ko', 'th');
+    if (thInput) { thInput.placeholder = '태국어 (자동 번역됨)'; }
+  }
+  if (translated && !catEditorDraft[catEditorType][i].th) {
+    catEditorDraft[catEditorType][i].th = translated;
+    const thInput = document.querySelector('#catEditorList input[data-cat-i="'+i+'"][data-cat-f="th"]');
+    if (thInput) thInput.value = translated;
+  }
+};
 
 function syncCatEditorInputs() {
   const inputs = document.querySelectorAll('#catEditorList input[data-cat-i]');
