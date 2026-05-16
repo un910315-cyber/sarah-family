@@ -762,6 +762,20 @@ let currentDayDetail = null; // YYYY-MM-DD
 let fixedExpensesCache = [];
 let familyMembersMap = {}; // email -> { name, color }
 const MEMBER_COLORS = ['#60a5fa','#f472b6','#34d399','#fbbf24','#a78bfa','#fb923c','#22d3ee','#fb7185'];
+// 표시 이름 override (Firestore name 필드 무시하고 강제 표시)
+const NAME_OVERRIDES = {
+  'un910315@gmail.com': '유현',
+  'phasuk730@gmail.com': '한나',
+};
+function displayName(emailOrMember) {
+  if (typeof emailOrMember === 'string') {
+    return NAME_OVERRIDES[emailOrMember] || (familyMembersMap[emailOrMember] && familyMembersMap[emailOrMember].name) || emailOrMember;
+  }
+  if (emailOrMember && emailOrMember.email) {
+    return NAME_OVERRIDES[emailOrMember.email] || emailOrMember.name || emailOrMember.email;
+  }
+  return '';
+}
 let editingFixedId = null;
 let eventsCache = [];
 let editingEventId = null;
@@ -882,8 +896,9 @@ function memberChip(email) {
   if (!email) return '';
   const m = familyMembersMap[email];
   if (!m) return '';
-  const short = m.name.slice(0, 2);
-  return '<span class="member-chip" title="'+esc(m.name)+'" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.04);border:1px solid '+m.color+'40;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600;color:'+m.color+';white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:'+m.color+';"></span>'+esc(short)+'</span>';
+  const name = NAME_OVERRIDES[email] || m.name;
+  const short = name.slice(0, 2);
+  return '<span class="member-chip" title="'+esc(name)+'" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.04);border:1px solid '+m.color+'40;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:600;color:'+m.color+';white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:'+m.color+';"></span>'+esc(short)+'</span>';
 }
 
 // 메모 표시: 한국어/태국어 둘 다 저장돼 있으면 함께 보여줌
@@ -1379,7 +1394,7 @@ function renderFamilyList() {
   el.innerHTML = familyCache.map(m =>
     '<div class="member-row">'
     + '<div style="flex:1;min-width:0;">'
-    + '<div class="name">' + esc(m.name || m.email) + '</div>'
+    + '<div class="name">' + esc(NAME_OVERRIDES[m.email] || m.name || m.email) + '</div>'
     + '<div class="email">' + esc(m.email) + '</div>'
     + '</div>'
     + '<span class="role">' + esc((m.role || 'member').toUpperCase()) + '</span>'
