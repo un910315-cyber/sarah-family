@@ -5,29 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>OurNest — 우리가족 가계부 / สมุดบัญชี</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0f0f12">
+<meta name="theme-color" content="#F4F8FE">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="OurNest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+Thai:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+Thai:wght@400;500;700&family=Gowun+Dodum&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<style>@font-face{font-family:'Pretendard';font-weight:300 800;font-display:swap;src:url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.woff2') format('woff2-variations')}</style>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0f0f12;
-    --surface: #1a1a1f;
-    --surface2: #24242b;
-    --border: #2e2e36;
-    --accent: #f59e0b;
-    --income: #22c55e;
-    --expense: #ef4444;
-    --text: #fafafa;
-    --text-dim: #9aa0a6;
+    --bg: #F4F8FE;
+    --surface: #FFFFFF;
+    --surface2: #EDF3FC;
+    --border: #DCE9FA;
+    --accent: #4A92E5;
+    --accent-soft: #DCE9FA;
+    --accent-pink: #FF8FB3;
+    --accent-pink-soft: #FFE3EC;
+    --income: #2F8862;
+    --expense: #C5527A;
+    --text: #2B3B57;
+    --text-dim: #6E7E96;
+    --shadow-card: 0 1px 2px rgba(74,146,229,.04), 0 4px 12px rgba(74,146,229,.06);
+    --shadow-elev: 0 4px 16px rgba(74,146,229,.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Inter','Noto Sans KR','Noto Sans Thai',sans-serif; min-height: 100vh; font-size: 14px; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard','Inter','Noto Sans KR','Noto Sans Thai',sans-serif; min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
   button { font-family: inherit; cursor: pointer; }
   input, select, textarea { font-family: inherit; }
 
@@ -38,9 +45,10 @@
   .bi .sep { color: var(--text-dim); margin: 0 4px; opacity: 0.5; }
 
   /* LAYOUT */
-  .header { background: rgba(15,15,18,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-  .logo { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
-  .logo .badge { background: var(--accent); color: #000; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+  .header { background: rgba(255,255,255,.85); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .logo { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .logo .karty-mark { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; object-position: center 35%; background: var(--accent-soft); flex-shrink: 0; }
+  .logo .badge { background: var(--accent-pink-soft); color: var(--expense); padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; }
   .header-right { display: flex; align-items: center; gap: 10px; }
   .user-badge { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
   .user-badge img { width: 20px; height: 20px; border-radius: 50%; }
@@ -165,7 +173,7 @@
   .cal-head-cell .th { display: block; font-size: 9px; opacity: 0.7; font-weight: 500; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
   .cal-cell { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; min-height: 70px; padding: 6px 5px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-  .cal-cell:hover { border-color: var(--accent); background: rgba(245,158,11,0.05); }
+  .cal-cell:hover { border-color: var(--accent); background: rgba(74,146,229,0.06); }
   .cal-cell.empty { background: transparent; border: 1px dashed var(--border); cursor: default; opacity: 0.35; }
   .cal-cell.empty:hover { border-color: var(--border); background: transparent; }
   .cal-cell.today { border-color: var(--accent); border-width: 2px; }
@@ -192,7 +200,7 @@
   .tx-day-head .day-sum { color: var(--text-dim); font-family: 'JetBrains Mono',monospace; }
   .tx-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
   .tx-item:last-child { border-bottom: none; }
-  .tx-item:hover { background: rgba(245,158,11,0.04); }
+  .tx-item:hover { background: rgba(74,146,229,0.05); }
   .tx-cat { background: var(--surface2); padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text-dim); white-space: nowrap; align-self: flex-start; }
   .tx-cat .th { color: var(--text-dim); opacity: 0.7; margin-left: 3px; }
   .tx-memo { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: break-word; }
@@ -207,12 +215,13 @@
   .tx-amount.income { color: var(--income); }
   .tx-amount.expense { color: var(--expense); }
 
-  .empty { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+  .empty { text-align: center; padding: 50px 20px; color: var(--text-dim); }
   .empty-icon { font-size: 48px; margin-bottom: 10px; }
+  img.empty-icon { width: 110px; height: 110px; object-fit: contain; display: block; margin: 0 auto 12px; }
   .empty .th { display: block; font-size: 12px; margin-top: 6px; opacity: 0.7; }
 
   /* MODAL */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; padding: 14px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(43,59,87,.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 14px; }
   .modal-overlay.open { display: flex; }
   .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 500px; max-height: 92vh; overflow-y: auto; }
   .modal-header { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
@@ -257,7 +266,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* NOTIFICATION */
-  .notif { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); opacity: 0; transition: all 0.25s; z-index: 300; max-width: 90vw; text-align: center; }
+  .notif { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 18px; font-size: 13px; box-shadow: 0 10px 30px rgba(43,59,87,.18); opacity: 0; transition: all 0.25s; z-index: 300; max-width: 90vw; text-align: center; }
   .notif.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   .notif.error { border-color: rgba(239,68,68,0.4); color: var(--expense); }
 
@@ -265,7 +274,7 @@
   .member-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; margin-bottom: 6px; }
   .member-row .name { flex: 1; font-size: 13px; font-weight: 600; }
   .member-row .email { color: var(--text-dim); font-size: 11px; }
-  .member-row .role { font-size: 10px; background: rgba(245,158,11,0.18); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+  .member-row .role { font-size: 10px; background: var(--accent-pink-soft); color: var(--expense); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
 
   /* BUDGET PAGE */
   .budget-page { padding-bottom: 80px; }
@@ -283,7 +292,7 @@
   .bo-row:nth-child(3) .bo-val { color: var(--accent); }
   .bo-bar { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-top: 10px; }
   .bo-bar-fill { height: 100%; background: var(--income); transition: width .3s, background .3s; width: 0%; }
-  .bo-bar-fill.warn { background: #f59e0b; }
+  .bo-bar-fill.warn { background: #F0B854; }
   .bo-bar-fill.over { background: var(--expense); }
 
   .budget-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
@@ -301,7 +310,7 @@
   .bcat-head .bcat-nums .over { color: var(--expense); }
   .bcat-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; position: relative; }
   .bcat-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--income); transition: width .25s, background .25s; }
-  .bcat-bar-fill.warn { background: #f59e0b; }
+  .bcat-bar-fill.warn { background: #F0B854; }
   .bcat-bar-fill.over { background: var(--expense); }
 
   .chart-wrap { position: relative; height: 280px; }
@@ -327,7 +336,7 @@
 <!-- 로그인 -->
 <div class="login-screen" id="loginScreen" style="display:none;">
   <div class="login-card">
-    <div style="font-size:36px;margin-bottom:6px;">💰</div>
+    <img src="icons/karty/wave.png" alt="카티" style="width:140px;height:140px;object-fit:contain;margin:0 auto 8px;display:block;">
     <h1>OurNest</h1>
     <div class="sub">우리가족 가계부<span class="th">สมุดบัญชีครอบครัวเรา</span><br>Google 계정으로 로그인하세요<span class="th" style="margin-top:2px;">เข้าสู่ระบบด้วยบัญชี Google</span></div>
     <button class="google-btn" id="googleLoginBtn" onclick="authLogin()">
@@ -341,7 +350,7 @@
 <!-- 메인 -->
 <div id="app" style="display:none;">
   <div class="header">
-    <div class="logo"><span>💰</span> OurNest <span class="badge">가계부 / บัญชี</span></div>
+    <div class="logo"><img src="icons/karty/head.png" alt="" class="karty-mark"> OurNest <span class="badge">가계부 / บัญชี</span></div>
     <div class="header-right" id="headerRight"></div>
   </div>
 
@@ -398,7 +407,7 @@
     </div>
 
     <!-- 이번 달 미적용 고정지출 알림 -->
-    <div id="fixedPendingBanner" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <div id="fixedPendingBanner" style="display:none;background:var(--accent-pink-soft);border:1px solid rgba(255,143,179,0.4);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
       <div style="font-size:13px;line-height:1.5;">
         <span id="fixedPendingText">이번 달 미적용 고정지출 0건</span>
         <div style="font-size:11px;color:var(--text-dim);">รายจ่ายประจำที่ยังไม่ได้ใส่ในเดือนนี้</div>
@@ -499,7 +508,7 @@
 <div class="modal-overlay" id="txModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="txModalTitle">거래 추가<span class="th">เพิ่มรายการ</span></div>
+      <div class="modal-title" id="txModalTitle"><img src="icons/karty/write.png" alt="" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px;">거래 추가<span class="th">เพิ่มรายการ</span></div>
       <button class="modal-close" onclick="closeTxModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -548,7 +557,7 @@
 <div class="modal-overlay" id="familyModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">👨‍👩‍👧 가족 구성원<span class="th">สมาชิกครอบครัว</span></div>
+      <div class="modal-title"><img src="icons/karty/head.png" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;object-position:center 35%;vertical-align:middle;margin-right:6px;background:var(--accent-soft);">가족 구성원<span class="th">สมาชิกครอบครัว</span></div>
       <button class="modal-close" onclick="document.getElementById('familyModal').classList.remove('open')">✕</button>
     </div>
     <div class="modal-body">
@@ -1046,7 +1055,7 @@ function renderSummary() {
 function renderTxList() {
   const listEl = document.getElementById('txList');
   if (!txCache.length) {
-    listEl.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>'
+    listEl.innerHTML = '<div class="empty"><img src="icons/karty/write.png" class="empty-icon" alt="">'
       + '<div>이번 달 거래 내역이 없습니다<span class="th">ไม่มีรายการในเดือนนี้</span></div>'
       + '<div style="margin-top:6px;font-size:12px;opacity:0.7;">위의 "+ 거래 추가" 버튼을 눌러 시작하세요<br>กดปุ่ม "+ เพิ่มรายการ" ด้านบนเพื่อเริ่ม</div></div>';
     return;
@@ -1791,7 +1800,7 @@ window.copyPrevMonthBudget = async function() {
 };
 
 // ── 차트 색상 팔레트 ──
-const CHART_COLORS = ['#f59e0b','#60a5fa','#f472b6','#34d399','#a78bfa','#fb923c','#22d3ee','#fb7185','#facc15','#a3e635','#94a3b8'];
+const CHART_COLORS = ['#4A92E5','#FF8FB3','#7AC8A8','#F0B854','#A78BFA','#FFAA7B','#5BB8DA','#FF94B4','#94C97A','#C9A4FF','#85B6E8'];
 
 function renderDoughnutChart(spentByCat) {
   const canvas = document.getElementById('chartDoughnut');

@@ -1,7 +1,7 @@
 // Sarah Family 가계부 — Service Worker
 // 앱 셸(HTML/manifest/icons)만 캐시. Firebase CDN/Firestore는 자체 캐시·재시도.
 
-const CACHE_VERSION = 'v3-2026-05-15';
+const CACHE_VERSION = 'v4-2026-05-16-karty';
 const CACHE_NAME = `sarah-family-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -10,6 +10,12 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/karty/wave.png',
+  './icons/karty/cheer.png',
+  './icons/karty/write.png',
+  './icons/karty/sad.png',
+  './icons/karty/sleep.png',
+  './icons/karty/head.png',
 ];
 
 self.addEventListener('install', (event) => {
