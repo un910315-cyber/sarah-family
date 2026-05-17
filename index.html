@@ -447,6 +447,7 @@
       <button class="btn btn-primary" onclick="openTxModal()" style="flex:1;">+ 거래 추가<span class="th">เพิ่มรายการ</span></button>
       <button class="btn btn-ghost" onclick="openFixedModal()">🔁 고정지출<span class="th">รายจ่ายประจำ</span></button>
       <button class="btn btn-ghost" id="familyBtn" onclick="openFamilyModal()" style="display:none;">👨‍👩‍👧 가족<span class="th">ครอบครัว</span></button>
+      <button class="btn btn-ghost" id="settingsBtn" onclick="openCategoriesModal()" style="display:none;" title="카테고리 설정 / ตั้งค่าหมวดหมู่">⚙️ 설정<span class="th">ตั้งค่า</span></button>
     </div>
 
     <!-- 이번 달 미적용 고정지출 알림 -->
@@ -1118,7 +1119,10 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    if (currentUser.role === 'admin') document.getElementById('familyBtn').style.display = '';
+    if (currentUser.role === 'admin') {
+      document.getElementById('familyBtn').style.display = '';
+      document.getElementById('settingsBtn').style.display = '';
+    }
     subscribeMonth();
     subscribeFixedExpenses();
     subscribeFamilyEvents();
