@@ -911,10 +911,12 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 function isValidDateStr(s) {
   if (!s || !DATE_RE.test(s)) return false;
-  const d = new Date(s + 'T00:00:00');
-  if (isNaN(d.getTime())) return false;
-  // ISO round-trip 비교로 2026-02-30 같은 잘못된 날짜 거름
-  return d.toISOString().slice(0,10) === s;
+  const [y, m, d] = s.split('-').map(Number);
+  // UTC 기반 round-trip — 한국 시차(UTC+9)에서 toISOString이 전날로 미는 문제 회피
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y
+      && dt.getUTCMonth() === m - 1
+      && dt.getUTCDate() === d;
 }
 function safeAmount(v) {
   const n = parseInt(v, 10);
